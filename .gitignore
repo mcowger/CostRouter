@@ -2,3 +2,5 @@ node_modules/
 build/
 
 npm-debug.log*
+config.json
+config.jsonc

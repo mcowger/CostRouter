@@ -1,0 +1,48 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "RUn Dev",
+      "request": "launch",
+      "runtimeArgs": [
+        "run",
+        "dev"
+      ],
+      "runtimeExecutable": "pnpm",
+      "skipFiles": [
+        "<node_internals>/**"
+      ],
+      "type": "node",
+      "console": "internalConsole",
+      "internalConsoleOptions": "openOnSessionStart",
+      "outputCapture": "std",
+    },
+
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Run Script: sendChatCompletion",
+      "program": "${workspaceFolder}/scripts/sendChatCompletion.ts",
+      "runtimeExecutable": "pnpx",
+      "runtimeArgs": [
+        "tsx"
+      ],
+      "env": {
+        "PORT": "3000"
+      }
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Start (Build & Run)",
+      "program": "${workspaceFolder}/build/main.js",
+      "args": [
+        "--config",
+        "./data/config.json"
+      ],
+      "env": {
+        "PORT": "3000"
+      }
+    }
+  ]
+}

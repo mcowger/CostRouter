@@ -1,38 +1,47 @@
 {
-    "name": "llm-gateway",
-    "version": "1.0.0",
-    "private": true,
-    "description": "An intelligent gateway for routing requests to LLM providers.",
-    "type": "module",
-    "main": "./build/main.js",
-    "exports": {
-        ".": "./build/main.js"
-    },
-    "scripts": {
-        "dev": "tsx watch src/main.ts",
-        "build": "tsc",
-        "start": "node ./build/main.js --config ./data/config.json",
-        "lint": "eslint . --ext .ts",
-        "format": "prettier --write ."
-    },
-    "author": "",
-    "license": "ISC",
-    "dependencies": {
-        "ai": "^3.4.33",
-        "express": "^4.21.2",
-        "rate-limiter-flexible": "^5.0.5",
-        "yargs": "^17.7.2",
-        "zod": "^3.25.76"
-    },
-    "devDependencies": {
-        "@types/express": "^5.0.3",
-        "@types/node": "^24.0.13",
-        "@types/yargs": "^17.0.33",
-        "@typescript-eslint/eslint-plugin": "^8.36.0",
-        "@typescript-eslint/parser": "^8.36.0",
-        "eslint": "^9.31.0",
-        "prettier": "^3.6.2",
-        "tsx": "^4.20.3",
-        "typescript": "^5.8.3"
-    }
+  "name": "llm-gateway",
+  "version": "1.0.0",
+  "private": true,
+  "description": "An intelligent gateway for routing requests to LLM providers.",
+  "type": "module",
+  "main": "./build/main.js",
+  "exports": {
+    ".": "./build/main.js"
+  },
+  "scripts": {
+    "dev": "tsx watch src/index.ts --config ./config.jsonc -l debug",
+    "build": "tsc",
+    "start": "node ./build/index.js --config ./config.jsonc",
+    "format": "prettier --write .",
+    "clean": "rm -rf build"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@ai-sdk/openai-compatible": "^0.2.15",
+    "ai": "^4.3.18",
+    "express": "^4.21.2",
+    "jsonc-parser": "^3.3.1",
+    "pino": "^9.7.0",
+    "pino-http": "^10.5.0",
+    "pino-pretty": "^13.0.0",
+    "rate-limiter-flexible": "^5.0.5",
+    "yargs": "^17.7.2",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.3",
+    "@types/hijackresponse": "^4.0.3",
+    "@types/node": "^24.0.13",
+    "@types/yargs": "^17.0.33",
+    "@typescript-eslint/eslint-plugin": "^8.36.0",
+    "@typescript-eslint/parser": "^8.36.0",
+    "axios": "^1.10.0",
+    "eslint": "^9.31.0",
+    "hijackresponse": "^5.0.0",
+    "jest": "^30.0.4",
+    "prettier": "^3.6.2",
+    "tsx": "^4.20.3",
+    "typescript": "^5.8.3"
+  }
 }

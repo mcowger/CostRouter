@@ -17,7 +17,7 @@ You are an expert senior software engineer specializing in TypeScript, Node.js, 
   * On startup, read the specified file from the command line arguments from the filesystem using `fs/promises`.  The location of the configuration file should be a required argument to the application.  If it is not provided, the application should exit.
   * Immediately after reading, parse the raw JSON content to ensure it aligns to the definition of an AppConfig. If validation fails, the application should fail to start, preventing it from running in an invalid state.
   * Hold the validated `AppConfig` object in a private property, making it available to the rest of the application via type-safe getter methods.
-  * The AppConfig object should be a list of Provider objects.
+  * The AppConfig object should be a list of Provider objects to start with.
   * Do not create methods to save configurations.
 * **`Limits.ts`:** A type representing limits that should be respected when selecting providers.  The following should be included, all as optional:
   * Requests per Minute
@@ -36,9 +36,8 @@ You are an expert senior software engineer specializing in TypeScript, Node.js, 
   * the API key to use
   * an instance of the Limits defined above.
   * an instance of Pricing as defined above.
-* **`Candidate.ts`:** A stateless class that generates an ordered list of providers to meet a request. It follows the express middleware contract. It should modify the req object with an *ordered* list of Providers that should be considered, in order of preference, to service the request.  The ordered list should be added to the req object as req.rankedProviders.
 * **`UsageManager.ts`:** An singleton orchestrator class for rate limiting. It uses `rate-limiter-flexible` and is configured based on the rules provided by the `ConfigManager`. It exposes `consume()` and `isUnderLimit()` methods.  It is not express middleware.
-* **`Router.ts`:** A stateless class that takes a request object and adds a single Provider object representing the best choice for executing the request made.  It uses UsageManager.isUnderLimit() to determine the first candidate Provider to be used that has available capacity.  It adds that Provider to the req object as req.selectedProvider.  The Router class follows the express middleware contract.
+* **`Router.ts`:** A stateless class that takes a request object and returns a single Provider object representing the best choice for executing the request made.  It should use UsageManager.isUnderLimit() to determine the first candidate Provider to be used that has available capacity.  It adds that Provider to the req object as `res.locals.chosenProvider`.  The Router class follows the express middleware contract.
 * **`Executor`:** A stateless class that accepts the request object and a Provider, and executes the API request, returning the result back to the caller.  It uses the req.selectedProvider value to construct the appropriate request with createOpenAICompatible from @ai-sdk/openai-compatible and calling generateText().  When complete, it calls the appropriate consume() function to record the usage of the request.
 
 ### 3. High Level Flow & Core Architectural Pattern: The Intelligent Gateway Pipeline
