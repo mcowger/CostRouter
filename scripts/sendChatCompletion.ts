@@ -16,7 +16,8 @@ async function main() {
     },
   );
 
-  console.log('Response:', response.data);
+  console.log(`Response: ${response.data.text.slice(0, 80)}...`);
+  console.log("Usage:", response.data.usage);
 }
 
 main().catch(console.error);

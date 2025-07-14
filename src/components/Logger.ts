@@ -1,6 +1,7 @@
-import pino, { Logger } from "pino";
+import { pino, type Logger } from "pino";
 import { NextFunction, Request, Response } from "express";
 import { randomUUID } from "crypto";
+import lodash from "lodash";
 
 /**
  * A custom middleware to capture the response body. This needs to be placed
@@ -30,24 +31,35 @@ export const requestResponseLogger = (
   const requestId = randomUUID();
   const logger = PinoLogger.getLogger();
 
-  // Log incoming request
-  logger.debug(
-    {
-      requestId,
-      type: "request",
-      method: req.method,
-      url: req.url,
-      headers: req.headers,
-      body: req.body,
-    },
-    `--> ${req.method} ${req.url}`,
-  );
+  // Log incoming request based on log level
+  const { method, url, headers, body } = req;
+  const requestLogObject: any = { requestId, type: "request", method, url };
+
+  if (logger.isLevelEnabled("trace")) {
+    requestLogObject.headers = headers;
+    requestLogObject.body = body;
+    logger.trace(requestLogObject, `--> ${method} ${url}`);
+  } else if (logger.isLevelEnabled("debug")) {
+    requestLogObject.messagePreview = lodash.get(body, "messages[0]");
+    logger.debug(requestLogObject, `--> ${method} ${url}`);
+  } else if (logger.isLevelEnabled("info")) {
+    logger.info(null, `--> ${method} ${url}`);
+  }
 
   const startTime = Date.now();
 
   // Log outgoing response on finish
   res.on("finish", () => {
     const duration = Date.now() - startTime;
+    const { statusCode, statusMessage } = res;
+    const responseLogObject: any = {
+      requestId,
+      type: "response",
+      statusCode,
+      statusMessage,
+      durationMs: duration,
+    };
+
     let responseBody;
     if ((res as any).responseBody) {
       try {
@@ -57,18 +69,25 @@ export const requestResponseLogger = (
       }
     }
 
-    logger.debug(
-      {
-        requestId,
-        type: "response",
-        statusCode: res.statusCode,
-        statusMessage: res.statusMessage,
-        durationMs: duration,
-        headers: res.getHeaders(),
-        body: responseBody,
-      },
-      `<-- ${req.method} ${req.url} ${res.statusCode} ${duration}ms`,
-    );
+    if (logger.isLevelEnabled("trace")) {
+      responseLogObject.headers = res.getHeaders();
+      responseLogObject.body = responseBody;
+      logger.trace(
+        responseLogObject,
+        `<-- ${method} ${url} ${statusCode} ${duration}ms`,
+      );
+    } else if (logger.isLevelEnabled("debug")) {
+      responseLogObject.choicePreview = lodash.get(responseBody, "text").slice(0, 40);
+      logger.debug(
+        responseLogObject,
+        `<-- ${method} ${url} ${statusCode} ${duration}ms`,
+      );
+    } else if (logger.isLevelEnabled("info")) {
+      logger.info(
+        null,
+        `<-- ${method} ${url} ${statusCode} ${duration}ms`,
+      );
+    }
   });
 
   next();
