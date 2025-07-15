@@ -1,8 +1,9 @@
 import { Provider } from "../../schemas/provider.schema.js";
+import { Model } from "../../schemas/model.schema.js";
 import { UsageManager } from "../UsageManager.js";
 import { logger } from "../Logger.js";
 import { Request, Response } from "express";
-import { GenerateTextResult, StreamTextResult } from "ai";
+import { GenerateTextResult, LanguageModelUsage, StreamTextResult } from "ai";
 import { getErrorMessage } from "../Utils.js";
 
 export abstract class BaseExecutor {
@@ -14,16 +15,44 @@ export abstract class BaseExecutor {
 
   public abstract execute(req: Request, res: Response): Promise<void>;
 
+  protected calculateCost(model: Model, usage: LanguageModelUsage): number {
+    const pricing = model.pricing;
+    if (!pricing || !usage) {
+      logger.debug(`No pricing or usage data for model '${model.name}'. Cost is 0.`);
+      return 0;
+    }
+
+    // If a flat request cost is defined, it overrides token-based pricing.
+    if (pricing.costPerRequest) {
+      return pricing.costPerRequest;
+    }
+
+    const inputCost = (usage.promptTokens / 1_000_000) * (pricing.inputCostPerMillionTokens ?? 0);
+    const outputCost = (usage.completionTokens / 1_000_000) * (pricing.outputCostPerMillionTokens ?? 0);
+    
+    const totalCost = inputCost + outputCost;
+    logger.debug(`Calculated cost for model '${model.name}': $${totalCost.toFixed(6)}`);
+    return totalCost;
+  }
+
   protected handleStreamingResponse(
     res: Response,
     provider: Provider,
+    modelName: string,
     result: StreamTextResult<any, any>,
   ): void {
     result.pipeDataStreamToResponse(res);
 
     result.usage
-      .then((usage: any) => {
-        this.usageManager.consume(provider.id, usage);
+      .then((usage: LanguageModelUsage) => {
+        const model = provider.models.find(m => m.name === modelName);
+        if (!model) {
+            logger.error(`Could not find model specifics for '${modelName}' during cost calculation.`);
+            this.usageManager.consume(provider.id, usage);
+            return;
+        }
+        const cost = this.calculateCost(model, usage);
+        this.usageManager.consume(provider.id, usage, cost);
       })
       .catch((error: any) => {
         logger.error(`Failed to consume usage for streaming request: ${getErrorMessage(error)}`);
@@ -33,9 +62,18 @@ export abstract class BaseExecutor {
   protected handleNonStreamingResponse(
     res: Response,
     provider: Provider,
+    modelName: string,
     result: GenerateTextResult<any, any>,
   ): void {
-    this.usageManager.consume(provider.id, result.usage);
+    const model = provider.models.find(m => m.name === modelName);
+    if (!model) {
+        logger.error(`Could not find model specifics for '${modelName}' during cost calculation.`);
+        this.usageManager.consume(provider.id, result.usage);
+        res.json(result);
+        return;
+    }
+    const cost = this.calculateCost(model, result.usage);
+    this.usageManager.consume(provider.id, result.usage, cost);
     res.json(result);
   }
 }

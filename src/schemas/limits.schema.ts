@@ -10,6 +10,9 @@ export const LimitSchema = z.object({
   tokensPerMinute: z.number().positive().optional(),
   tokensPerHour: z.number().positive().optional(),
   tokensPerDay: z.number().positive().optional(),
+  costPerMinute: z.number().positive().optional(),
+  costPerHour: z.number().positive().optional(),
+  costPerDay: z.number().positive().optional(),
 });
 
 /**

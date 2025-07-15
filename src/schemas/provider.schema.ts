@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { LimitSchema } from './limits.schema.js';
-import { PricingSchema } from './pricing.schema.js';
+import { ModelSchema } from './model.schema.js';
 
 /**
  * Zod schema for a single LLM provider configuration.
@@ -22,15 +22,12 @@ export const ProviderSchema = z
     /** Optional rate limits */
     limits: LimitSchema.optional(),
 
-    /** Optional pricing info */
-    pricing: PricingSchema.optional(),
-
-    /** Supported models (always required) */
-    models: z.array(z.string()).min(1, "At least one model must be listed"),
+    /** Supported models, each with optional pricing. */
+    models: z.array(ModelSchema).min(1, "At least one model must be listed"),
   })
   .refine((data) => data.type !== "openai" || (data.baseURL && data.apiKey), {
     message: "Both baseURL and apiKey are required when type is 'openai'",
-    path: ["baseURL", "apiKey"], 
+    path: ["baseURL", "apiKey"],
   });
 
 /**

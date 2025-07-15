@@ -42,7 +42,7 @@ export class Router {
     logger.debug(`Searching for providers for model: ${modelname}`);
     const providers: Provider[] = ConfigManager.getProviders();
     const filteredProviders = providers.filter((provider) =>
-      provider.models.includes(modelname),
+      provider.models.some(model => model.name === modelname),
     );
     return filteredProviders.length > 0 ? filteredProviders : undefined;
   }

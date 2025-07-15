@@ -4,9 +4,12 @@ import { Provider } from "../schemas/provider.schema.js";
 import { logger } from "./Logger.js";
 import { Limits } from "../schemas/limits.schema.js";
 import { getErrorMessage, formatDuration } from "./Utils.js";
-import { log } from "console";
 
 type LimitType = keyof Limits;
+
+// A multiplier to convert decimal currency into integer points for the limiter.
+// Using 10000 points = $1.00, so 1 point = $0.0001 (1/100th of a cent).
+const COST_MULTIPLIER = 10000;
 
 export class UsageManager {
   private static instance: UsageManager;
@@ -60,21 +63,28 @@ export class UsageManager {
   private createLimitersForProvider(provider: Provider): void {
     if (!provider.limits) return;
 
-    const limitConfigs: [LimitType, number][] = [
-      ["requestsPerMinute", 60], ["requestsPerHour", 3600], ["requestsPerDay", 86400],
-      ["tokensPerMinute", 60], ["tokensPerHour", 3600], ["tokensPerDay", 86400],
+    // Defines the types and durations of rate limits the UsageManager is designed to track.
+    // The actual limit values are read from the provider's configuration.
+    const limitConfigs: [LimitType, number, 'requests' | 'tokens' | 'cost'][] = [
+      ["requestsPerMinute", 60, "requests"], ["requestsPerHour", 3600, "requests"], ["requestsPerDay", 86400, "requests"],
+      ["tokensPerMinute", 60, "tokens"], ["tokensPerHour", 3600, "tokens"], ["tokensPerDay", 86400, "tokens"],
+      ["costPerMinute", 60, "cost"], ["costPerHour", 3600, "cost"], ["costPerDay", 86400, "cost"],
     ];
 
-    for (const [limitType, duration] of limitConfigs) {
-      const points = provider.limits[limitType];
-      const requestLimitType = limitType.startsWith("requests") ? "requests" : "tokens";
+    for (const [limitType, duration, type] of limitConfigs) {
+      let points = provider.limits[limitType];
 
       if (points) {
+        // Convert cost limits from dollars to integer points
+        if (type === 'cost') {
+          points = Math.floor(points * COST_MULTIPLIER);
+        }
+
         const key = `${provider.id}/${limitType}`;
         const opts: IRateLimiterOptions = { points, duration };
         this.limiters.set(key, new RateLimiterMemory(opts));
         logger.debug(
-          `Limiter: '${key}': ${points} ${requestLimitType}/${formatDuration(duration)} (${duration}s).`,
+          `Limiter: '${key}': ${points} ${type}/${formatDuration(duration)} (${duration}s).`,
         );
       }
     }
@@ -92,6 +102,11 @@ export class UsageManager {
     try {
       for (const key of providerLimitKeys) {
         const limiter = this.limiters.get(key);
+        // Cost-based limits are checked on consumption, not pre-flight,
+        // as the cost is unknown until the response is received.
+        if (key.includes('cost')) {
+          continue;
+        }
         const res = await limiter?.get(providerId);
         if (res && res.consumedPoints >= (limiter?.points ?? Infinity)) {
           logger.warn(`Provider '${providerId}' has exceeded limit '${key}'.`);
@@ -108,12 +123,18 @@ export class UsageManager {
   /**
    * Consumes resources for a given provider.
    */
-  public async consume(providerId: string, usage: { promptTokens?: number; completionTokens?: number }): Promise<void> {
-    logger.debug(`Consuming usage for provider '${providerId}':`, usage);
+  public async consume(
+    providerId: string, 
+    usage: { promptTokens?: number; completionTokens?: number },
+    costInUSD: number = 0,
+  ): Promise<void> {
+    logger.info(`Consuming usage for provider '${providerId}':`, { usage, costInUSD });
+    
     const totalTokens = (usage.promptTokens || 0) + (usage.completionTokens || 0);
+    const costInPoints = Math.floor(costInUSD * COST_MULTIPLIER);
     const consumptionJobs: Promise<any>[] = [];
 
-    const checkAndConsume = async (limitType: LimitType, points: number) => {
+    const checkAndConsume = (limitType: LimitType, points: number) => {
       const key = `${providerId}/${limitType}`;
       const limiter = this.limiters.get(key);
       if (limiter && points > 0) {
@@ -121,17 +142,26 @@ export class UsageManager {
       }
     };
 
+    // Requests
     checkAndConsume('requestsPerMinute', 1);
     checkAndConsume('requestsPerHour', 1);
     checkAndConsume('requestsPerDay', 1);
+
+    // Tokens
     checkAndConsume('tokensPerMinute', totalTokens);
     checkAndConsume('tokensPerHour', totalTokens);
     checkAndConsume('tokensPerDay', totalTokens);
 
+    // Cost
+    checkAndConsume('costPerMinute', costInPoints);
+    checkAndConsume('costPerHour', costInPoints);
+    checkAndConsume('costPerDay', costInPoints);
+
     try {
       await Promise.all(consumptionJobs);
-      logger.debug(`Consumed usage for provider '${providerId}': ${totalTokens} tokens, 1 request.`);
+      logger.info(`Consumed usage for provider '${providerId}': ${totalTokens} tokens, 1 request, $${costInUSD.toFixed(4)}.`);
     } catch (error) {
+      // This catch will trigger if a limit is exceeded upon consumption.
       logger.warn(`Rate limit exceeded for provider '${providerId}' on consumption: ${getErrorMessage(error)}`);
     }
   }

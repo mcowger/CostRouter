@@ -49,15 +49,15 @@ export class CopilotExecutor extends BaseExecutor {
         headers: COPILOT_HEADERS,
       });
 
-      const { messages, stream = false } = req.body;
-      const model: LanguageModelV1 = llm(req.body.model as string);
+      const { messages, stream = false, model: modelName } = req.body;
+      const model: LanguageModelV1 = llm(modelName as string);
 
       if (stream) {
         const result = await streamText({ model, messages });
-        this.handleStreamingResponse(res, chosenProvider, result);
+        this.handleStreamingResponse(res, chosenProvider, modelName, result);
       } else {
         const result = await generateText({ model, messages });
-        this.handleNonStreamingResponse(res, chosenProvider, result);
+        this.handleNonStreamingResponse(res, chosenProvider, modelName, result);
       }
     } catch (error) {
       logger.error(`AI request failed for provider ${chosenProvider.id}: ${getErrorMessage(error)}`);

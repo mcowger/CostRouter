@@ -1,52 +1,68 @@
 {
   "providers": [
     {
-      "id": "provider-1", 
-      "type": "openai", 
-      "baseURL": "https://api.openai.com/v1", 
-      "apiKey": "sk-your_key_goes_here", 
+      "id": "provider-1",
+      "type": "openai",
+      "baseURL": "https://api.openai.com/v1",
+      "apiKey": "sk-your_key_goes_here",
       "limits": {
-        "requestsPerMinute": 100, 
-        "requestsPerHour": 200, 
-        "requestsPerDay": 1000, 
+        "requestsPerMinute": 100,
+        "requestsPerHour": 200,
+        "requestsPerDay": 1000,
         "tokensPerMinute": 100000,
         "tokensPerHour": 200000,
-        "tokensPerDay": 1000000
+        "tokensPerDay": 1000000,
+        "costPerMinute": 0.05,
+        "costPerHour": 0.50,
+        "costPerDay": 5.00
       },
-      "pricing": {
-        "inputCostPerMillionTokens": 0.50, 
-        "outputCostPerMillionTokens": 1.50,
-        "costPerRequest": 0.00
-      },
-      "models": ["gpt-4", "gpt-3.5-turbo"]
-    },
+      "models": [
         {
-      "id": "provider-2", 
-      "type": "openai", 
-      "baseURL": "https://openrouter.ai/api/v1", 
-      "apiKey": "sk-or-your_key_goes_here", 
+          "name": "gpt-4",
+          "pricing": {
+            "inputCostPerMillionTokens": 10.00,
+            "outputCostPerMillionTokens": 30.00
+          }
+        },
+        {
+          "name": "gpt-3.5-turbo",
+          "pricing": {
+            "inputCostPerMillionTokens": 0.50,
+            "outputCostPerMillionTokens": 1.50
+          }
+        }
+      ]
+    },
+    {
+      "id": "provider-2",
+      "type": "openai",
+      "baseURL": "https://openrouter.ai/api/v1",
+      "apiKey": "sk-or-your_key_goes_here",
       "limits": {
-        "requestsPerMinute": 2, 
-        "requestsPerHour": 10, 
-        "requestsPerDay": 100, 
+        "requestsPerMinute": 2,
+        "requestsPerHour": 10,
+        "requestsPerDay": 100,
         "tokensPerMinute": 1000,
         "tokensPerHour": 5000,
-        "tokensPerDay": 10000
+        "tokensPerDay": 10000,
+        "costPerDay": 1.00
       },
-      "pricing": {
-        "inputCostPerMillionTokens": 5.0, 
-        "outputCostPerMillionTokens": 15.0,
-        "costPerRequest": 0.0001
-      },
-      "models": ["moonshotai/kimi-k2:free"]
+      "models": [
+        {
+          "name": "moonshotai/kimi-k2:free",
+          "pricing": {
+            "costPerRequest": 0
+          }
+        }
+      ]
     },
     {
       "id": "copilot-provider",
       "type": "copilot",
       "oauthToken": "your_github_oauth_token_here",
       "models": [
-        "gpt-4o",
-        "gpt-4.1"
+        { "name": "gpt-4o" },
+        { "name": "gpt-4.1" }
       ]
     }
   ]

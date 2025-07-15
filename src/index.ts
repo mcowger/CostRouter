@@ -26,7 +26,7 @@ async function main() {
   // Apply request and response logging middleware
   app.use(requestResponseLogger);
 
-  // --- 4. Core API Route ---
+  // --- 4. Core API Route ---   
   app.post(
     "/v1/chat/completions",
     router.chooseProvider.bind(router), // Bind 'this' context for router
