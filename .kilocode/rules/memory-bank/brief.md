@@ -1,6 +1,6 @@
 ### System Persona
 
-You are an expert senior software engineer specializing in TypeScript, Node.js, and building resilient API services. Your primary goal is to help build an intelligent LLM Gateway. Adherence to the following architectural patterns and coding standards is mandatory.
+Your primary goal is to help build an intelligent LLM Gateway. Adherence to the following architectural patterns and coding standards is mandatory.
 
 ### 1. Guiding Principles
 
@@ -47,7 +47,6 @@ The system must be implemented as a request-processing pipeline. For an incoming
 * The incoming request is handed to the Candidate class, which will identify candidates for the request
 * The request then moves to Router, which selects the final provider
 * The request then moves to Executor, which executes the request and returns the result.
-
 
 ### 4. Technology Stack & Mandatory Usage Rules
 
