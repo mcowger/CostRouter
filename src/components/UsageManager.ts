@@ -4,6 +4,7 @@ import { Provider } from "../schemas/provider.schema.js";
 import { logger } from "./Logger.js";
 import { Limits } from "../schemas/limits.schema.js";
 import { getErrorMessage, formatDuration } from "./Utils.js";
+import { UsageDatabaseManager } from "./UsageDatabaseManager.js";
 
 type LimitType = keyof Limits;
 
@@ -124,12 +125,27 @@ export class UsageManager {
    * Consumes resources for a given provider.
    */
   public async consume(
-    providerId: string, 
+    providerId: string,
+    model: string,
     usage: { promptTokens?: number; completionTokens?: number },
     costInUSD: number = 0,
   ): Promise<void> {
-    logger.info(`Consuming usage for provider '${providerId}':`, { usage, costInUSD });
+    logger.debug(`Consuming usage for provider '${providerId}':`, { model, usage, costInUSD });
     
+    try {
+      const dbManager = UsageDatabaseManager.getInstance();
+      await dbManager.recordUsage({
+        providerId,
+        model,
+        promptTokens: usage.promptTokens ?? 0,
+        completionTokens: usage.completionTokens ?? 0,
+        cost: costInUSD,
+      });
+    } catch (error) {
+      // Non-fatal error, as this is for optional reporting.
+      // The error is logged by the singleton's initialization check.
+    }
+
     const totalTokens = (usage.promptTokens || 0) + (usage.completionTokens || 0);
     const costInPoints = Math.floor(costInUSD * COST_MULTIPLIER);
     const consumptionJobs: Promise<any>[] = [];

@@ -21,30 +21,14 @@ export class ConfigManager {
      * Initializes the singleton ConfigManager by loading and validating the config file.
      * This should be called once at application startup.
      */
-    public static async initialize(): Promise<ConfigManager> {
+    public static async initialize(configPath: string): Promise<ConfigManager> {
         if (ConfigManager.instance) {
             logger.warn("ConfigManager has already been initialized.");
             return ConfigManager.getInstance();
         }
 
         try {
-          // 1. --- Argument Parsing ---
-          const argv = await yargs(hideBin(process.argv))
-            .option("config", {
-              alias: "c",
-              type: "string",
-              description: "Path to the configuration JSON(C) file",
-              demandOption: true, // Makes this a required argument
-            })
-            .option("loglevel", {
-              alias: "l",
-              type: "string",
-              description: "Logging level (e.g., info, debug, warn, error)",
-              default: "info", // Default log level
-            })
-            .parse();
-          logger.level = argv.loglevel || "info"; // Set the log level based on the argument
-          const rawData = await fs.readFile(argv.config, "utf-8");
+          const rawData = await fs.readFile(configPath, "utf-8");
           // Use jsonc-parser to parse JSONC (JSON with comments)
           const json = parse(rawData);
 
@@ -52,7 +36,7 @@ export class ConfigManager {
           const validatedConfig = AppConfigSchema.parse(json);
 
           ConfigManager.instance = new ConfigManager(validatedConfig);
-          logger.info("Configuration loaded and validated successfully from: ", argv.config);
+          logger.info("Configuration loaded and validated successfully from: ", configPath);
           return ConfigManager.instance;
         } catch (error) {
             logger.error(`Failed to initialize ConfigManager: ${getErrorMessage(error)}`);
