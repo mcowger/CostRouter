@@ -39,6 +39,15 @@
         "costPerRequest": 0.0001
       },
       "models": ["moonshotai/kimi-k2:free"]
+    },
+    {
+      "id": "copilot-provider",
+      "type": "copilot",
+      "oauthToken": "your_github_oauth_token_here",
+      "models": [
+        "gpt-4o",
+        "gpt-4.1"
+      ]
     }
   ]
 }

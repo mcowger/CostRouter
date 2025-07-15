@@ -4,10 +4,10 @@ async function main() {
   const response = await axios.post(
     "http://localhost:3000/v1/chat/completions",
     {
-      model: "moonshotai/kimi-k2:free",
+      model: "gpt-4o",
       // model: "nonexistent-model",
-      messages: [{ role: "user", content: "What is the meaning of life" }],
-      stream: false
+      messages: [{ role: "user", content: "are you gpt-4o or gpt-4.1?" }],
+      stream: false,
     },
     {
       headers: {
@@ -16,7 +16,7 @@ async function main() {
     },
   );
 
-  console.log(`Response: ${response.data.text.slice(0, 80)}...`);
+  console.log(`Response: ${response.data.text.slice(0, 1000)}...`);
   console.log("Usage:", response.data.usage);
 }
 

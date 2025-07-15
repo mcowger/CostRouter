@@ -11,7 +11,7 @@ export const ProviderSchema = z
     id: z.string().max(32),
 
     /** The type of provider ('openai' requires baseURL and apiKey) */
-    type: z.enum(["openai", "custom"]),
+    type: z.enum(["openai", "custom", "copilot"]),
 
     /** The base URL (required if type is 'openai') */
     baseURL: z.string().url().optional(),
@@ -30,7 +30,7 @@ export const ProviderSchema = z
   })
   .refine((data) => data.type !== "openai" || (data.baseURL && data.apiKey), {
     message: "Both baseURL and apiKey are required when type is 'openai'",
-    path: ["baseURL", "apiKey"], // Optional: Highlights both fields in error
+    path: ["baseURL", "apiKey"], 
   });
 
 /**
