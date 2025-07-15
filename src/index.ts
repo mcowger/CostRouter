@@ -82,6 +82,35 @@ async function main() {
     executor.execute.bind(executor),
   );
 
+  app.get("/v1/models", (_req, res) => {
+    try {
+      const providers = ConfigManager.getProviders();
+      const allModels = new Set<string>();
+
+      for (const provider of providers) {
+        for (const model of provider.models) {
+          allModels.add(model.name);
+        }
+      }
+
+      const modelData = Array.from(allModels).map((modelId) => ({
+        id: modelId,
+        object: "model",
+        created: 1686935002, // Fixed timestamp as requested
+        owned_by: "ai",      // Fixed owner as requested
+      }));
+
+      res.json({
+        object: "list",
+        data: modelData,
+      });
+    } catch (error) {
+      const message = getErrorMessage(error);
+      logger.error(`Failed to get models: ${message}`);
+      res.status(500).json({ error: "Failed to retrieve models." });
+    }
+  });
+
   // --- 6. Usage API Routes ---
   app.get("/usage/get", async (req, res) => {
     try {
