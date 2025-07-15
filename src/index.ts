@@ -17,9 +17,13 @@ async function main() {
   const executor = Executor.getInstance(usageManager);
 
   // --- 3. Express Server Setup ---
+  // Initialize Express application
   const app = express();
+  // Enable JSON body parsing for incoming requests
   app.use(express.json());
+  // Apply response body logging middleware
   app.use(responseBodyLogger);
+  // Apply request and response logging middleware
   app.use(requestResponseLogger);
 
   // --- 4. Core API Route ---
@@ -32,6 +36,7 @@ async function main() {
   const PORT = process.env.PORT || 3000;
   app.listen(PORT, () => {
     logger.info(`LLM Gateway listening on port ${PORT}`);
+    logger.info(`OpenAPI Spec available at http://localhost:${PORT}/v1/openapi.json`);
   });
 }
 
