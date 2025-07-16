@@ -1,5 +1,5 @@
 {
-  "name": "llm-gateway-main",
+  "name": "main",
   "version": "1.0.0",
   "private": true,
   "description": "An intelligent gateway for routing requests to LLM providers.",
