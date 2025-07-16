@@ -1,6 +1,9 @@
 import express from "express";
+import cors from "cors";
 import yargs from "yargs/yargs";
 import { hideBin } from "yargs/helpers";
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { ConfigManager } from "./components/ConfigManager.js";
 import { Router } from "./components/Router.js";
 import { UsageManager } from "./components/UsageManager.js";
@@ -70,6 +73,13 @@ async function main() {
   const app = express();
   // Enable JSON body parsing for incoming requests
   app.use(express.json());
+  app.use(cors());
+
+  // --- Static UI Serving ---
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = path.dirname(__filename);
+  const uiBuildPath = path.join(__dirname, '../../ui/build');
+  app.use(express.static(uiBuildPath));
   // Apply response body logging middleware
   app.use(responseBodyLogger);
   // Apply request and response logging middleware
@@ -111,7 +121,31 @@ async function main() {
     }
   });
 
-  // --- 6. Usage API Routes ---
+  // --- 6. Config API Routes ---
+  app.get("/config/get", (_req, res) => {
+    try {
+      const config = ConfigManager.getConfig();
+      res.json(config);
+    } catch (error) {
+      const message = getErrorMessage(error);
+      logger.error(`Failed to get config: ${message}`);
+      res.status(500).json({ error: "Failed to retrieve config." });
+    }
+  });
+
+  app.post("/config/set", async (req, res) => {
+    try {
+      const newConfig = req.body;
+      await ConfigManager.updateConfig(newConfig);
+      res.json({ message: "Configuration updated successfully." });
+    } catch (error) {
+      const message = getErrorMessage(error);
+      logger.error(`Failed to set config: ${message}`);
+      res.status(500).json({ error: "Failed to update configuration." });
+    }
+  });
+
+  // --- 7. Usage API Routes ---
   app.get("/usage/get", async (req, res) => {
     try {
       const { hours = '24', model, providerId } = req.query;

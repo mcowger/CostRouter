@@ -11,10 +11,12 @@ import { getErrorMessage } from './Utils.js';
 export class ConfigManager {
     private static instance: ConfigManager;
     private config: AppConfig;
+    private configPath: string;
 
     // Private constructor to enforce singleton pattern
-    private constructor(initialConfig: AppConfig) {
+    private constructor(initialConfig: AppConfig, configPath: string) {
         this.config = initialConfig;
+        this.configPath = configPath;
     }
 
     /**
@@ -35,7 +37,7 @@ export class ConfigManager {
           // Validate the data on load. Throws a detailed error on failure.
           const validatedConfig = AppConfigSchema.parse(json);
 
-          ConfigManager.instance = new ConfigManager(validatedConfig);
+          ConfigManager.instance = new ConfigManager(validatedConfig, configPath);
           logger.info("Configuration loaded and validated successfully from: ", configPath);
           return ConfigManager.instance;
         } catch (error) {
@@ -60,5 +62,38 @@ export class ConfigManager {
             throw new Error("ConfigManager must be initialized before use.");
         }
         return ConfigManager.instance.config.providers;
+    }
+
+    public static getConfig(): AppConfig {
+        if (!ConfigManager.instance) {
+            throw new Error("ConfigManager must be initialized before use.");
+        }
+        return ConfigManager.instance.config;
+    }
+
+    public static async updateConfig(newConfig: AppConfig): Promise<void> {
+        if (!ConfigManager.instance) {
+            throw new Error("ConfigManager must be initialized before use.");
+        }
+
+        // Validate the new config before applying it
+        const validatedConfig = AppConfigSchema.parse(newConfig);
+        ConfigManager.instance.config = validatedConfig;
+
+        // Atomically write the new config to the file
+        const tempPath = `${ConfigManager.instance.configPath}.${Date.now()}.tmp`;
+        try {
+            await fs.writeFile(tempPath, JSON.stringify(validatedConfig, null, 2), 'utf-8');
+            await fs.rename(tempPath, ConfigManager.instance.configPath);
+            logger.info("Configuration file updated successfully.");
+        } catch (error) {
+            // If something goes wrong, try to clean up the temp file
+            try {
+                await fs.unlink(tempPath);
+            } catch (cleanupError) {
+                // Ignore errors during cleanup
+            }
+            throw new Error(`Failed to write configuration to file: ${getErrorMessage(error)}`);
+        }
     }
 }
