@@ -1,5 +1,5 @@
 {
-  "name": "llm-gateway-server",
+  "name": "server",
   "version": "1.0.0",
   "private": true,
   "description": "An intelligent gateway for routing requests to LLM providers.",

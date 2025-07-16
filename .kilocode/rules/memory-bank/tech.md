@@ -18,7 +18,7 @@ This document outlines the key technologies, libraries, and tools used in the LL
 ## Development & Build Tools
 
 *   **pnpm**: The primary package manager for the project.
-*   **tsx**: A tool for executing TypeScript files directly, used for running the server in development mode with hot-reloading.
+*   **tsx**: A tool for executing TypeScript files directly. The development server is run using `pnpm -w -F server run dev`, which uses `tsx` for hot-reloading.
 *   **TypeScript Compiler (`tsc`)**: Used to compile the TypeScript source code into JavaScript for production builds.
 *   **Prettier**: Used for automated code formatting to maintain a consistent style.
 
