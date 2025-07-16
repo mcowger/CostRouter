@@ -1,11 +1,15 @@
-import { Low } from 'lowdb';
-import { JSONFile } from 'lowdb/node';
-import { subHours, isBefore, parseISO } from 'date-fns';
-import { UsageDatabase, UsageRecord, UsageRecordSchema } from '../schemas/usage.schema.js';
-import { logger } from './Logger.js';
-import { getErrorMessage } from './Utils.js';
+import { Low } from "lowdb";
+import { JSONFile } from "lowdb/node";
+import { subHours, isBefore, parseISO } from "date-fns";
+import {
+  UsageDatabase,
+  UsageRecord,
+  UsageRecordSchema,
+} from "../../schemas/usage.schema.js";
+import { logger } from "./Logger.js";
+import { getErrorMessage } from "./Utils.js";
 
-type UsageRecordInput = Omit<UsageRecord, 'timestamp' | 'totalTokens'>;
+type UsageRecordInput = Omit<UsageRecord, "timestamp" | "totalTokens">;
 
 export class UsageDatabaseManager {
   private static instance: UsageDatabaseManager;
@@ -37,9 +41,9 @@ export class UsageDatabaseManager {
   public async recordUsage(data: UsageRecordInput): Promise<void> {
     const totalTokens = (data.promptTokens || 0) + (data.completionTokens || 0);
     const newRecord: UsageRecord = {
-        ...data,
-        timestamp: new Date().toISOString(),
-        totalTokens,
+      ...data,
+      timestamp: new Date().toISOString(),
+      totalTokens,
     };
 
     // This ensures defaults are applied if any fields are missing
@@ -50,11 +54,14 @@ export class UsageDatabaseManager {
     logger.info("Recorded usage to database:", parsedRecord);
   }
 
-  public async getUsage(hours: number, filters: { model?: string; providerId?: string }): Promise<UsageRecord[]> {
+  public async getUsage(
+    hours: number,
+    filters: { model?: string; providerId?: string },
+  ): Promise<UsageRecord[]> {
     await this.db.read();
     const cutoffDate = subHours(new Date(), hours);
 
-    return this.db.data.records.filter(record => {
+    return this.db.data.records.filter((record) => {
       const recordDate = parseISO(record.timestamp);
       if (isBefore(recordDate, cutoffDate)) {
         return false;
@@ -73,8 +80,8 @@ export class UsageDatabaseManager {
     await this.db.read();
     const originalCount = this.db.data.records.length;
     const cutoffDate = subHours(new Date(), hours);
-    
-    this.db.data.records = this.db.data.records.filter(record => {
+
+    this.db.data.records = this.db.data.records.filter((record) => {
       const recordDate = parseISO(record.timestamp);
       return !isBefore(recordDate, cutoffDate);
     });
@@ -82,7 +89,9 @@ export class UsageDatabaseManager {
     await this.db.write();
     const removedCount = originalCount - this.db.data.records.length;
     if (removedCount > 0) {
-      logger.info(`Pruned ${removedCount} old usage records (older than ${hours} hours).`);
+      logger.info(
+        `Pruned ${removedCount} old usage records (older than ${hours} hours).`,
+      );
     } else {
       logger.debug("No usage records needed pruning.");
     }
