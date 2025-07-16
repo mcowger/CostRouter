@@ -2,6 +2,8 @@
 	import { configStore } from '$lib/stores/configStore';
 	import type { PageData } from './$types';
 
+	import ProviderCard from '$lib/components/ProviderCard.svelte';
+
 	export let data: PageData;
 
 	// Populate the store with the data received from the load function
@@ -11,6 +13,10 @@
 </script>
 
 <div class="p-8">
-	<h1 class="text-2xl font-bold mb-4">Gateway Configuration</h1>
-	<pre class="bg-gray-900 p-4 rounded-lg">{JSON.stringify($configStore, null, 2)}</pre>
+<h1 class="text-3xl font-bold mb-6">Gateway Configuration</h1>
+	<div class="space-y-4">
+		{#each $configStore.providers as provider (provider.id)}
+			<ProviderCard {provider} />
+		{/each}
+	</div>
 </div>

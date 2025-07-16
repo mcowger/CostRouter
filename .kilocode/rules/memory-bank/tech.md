@@ -19,7 +19,7 @@ This document outlines the key technologies, libraries, and tools used in the LL
 
 - **SvelteKit**: A UI framework for building web applications of all sizes, with a beautiful development experience and flexible filesystem-based routing.
 - **Vite**: A next-generation frontend tooling that provides an extremely fast development environment and bundles code for production.
-- **Flowbite** and **Flowbite-Svelte**: UI component libraries that provide a set of accessible and responsive components built on top of Tailwind CSS.
+- **DaisyUI**: A Tailwind CSS component library that provides a set of pre-styled components. It's used for the main UI components.
 
 ## Development & Build Tools
 
