@@ -14,6 +14,7 @@
 
 <div class="p-8">
 <h1 class="text-3xl font-bold mb-6">Gateway Configuration</h1>
+<p class="mb-4">Manage your gateway providers below.</p>
 	<div class="space-y-4">
 		{#each $configStore.providers as provider (provider.id)}
 			<ProviderCard {provider} />

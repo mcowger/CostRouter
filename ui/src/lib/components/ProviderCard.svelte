@@ -2,6 +2,7 @@
 <script lang="ts">
 	import type { Provider } from '$schemas/provider.schema';
 
+
 	import LimitsForm from './LimitsForm.svelte';
 	import ModelsForm from './ModelsForm.svelte';
 
@@ -14,7 +15,7 @@
 	];
 </script>
 
-<div class="card w-full bg-neutral text-neutral-content shadow-xl">
+<div class="card w-1/2 bg-neutral text-neutral-content shadow-xl">
 	<div class="card-body">
 		<div class="grid grid-cols-1 gap-6 md:grid-cols-2">
 			<!-- Provider ID Input -->
@@ -46,6 +47,7 @@
 					type="text"
 					bind:value={provider.baseURL}
 					disabled={provider.type !== 'openai'}
+          placeholder={provider.type == 'openai' ? "Enter API Key" : "Not required for this provider type"}
 					class="input input-bordered w-full"
 				/>
 			</label>
@@ -59,6 +61,7 @@
 					type="password"
 					bind:value={provider.apiKey}
 					disabled={provider.type !== 'openai'}
+          placeholder={provider.type == 'openai' ? "Enter API Key" : "Not required for this provider type"}
 					class="input input-bordered w-full"
 				/>
 			</label>

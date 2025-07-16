@@ -1,5 +1,4 @@
 // tailwind.config.js
-import daisyui from 'daisyui';
 /** @type {import('tailwindcss').Config} */
 export default {
   content: [
@@ -8,9 +7,6 @@ export default {
   theme: {
     extend: {},
   },
-  plugins: [
-    daisyui, // <-- ADD THIS LINE
-  ],
   // OPTIONAL: DaisyUI theme configuration
   // daisyui: {
   //   themes: ["light", "dark", "cupcake", "emerald"], // An array of themes to include

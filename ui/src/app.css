@@ -1,6 +1,16 @@
 /* src/app.css */
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
+@plugin "daisyui" {
+  themes: light --default, dark --prefersdark, dracula;
+};
+@config '../tailwind.config.js';
 
-/* No custom CSS or @apply rules here for now */
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentcolor);
+  }
+}
