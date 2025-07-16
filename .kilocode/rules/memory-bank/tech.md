@@ -4,25 +4,32 @@ This document outlines the key technologies, libraries, and tools used in the LL
 
 ## Core Runtime
 
-*   **Node.js**: The application is built to run on the Node.js runtime.
-*   **TypeScript**: The entire codebase is written in TypeScript for type safety and improved developer experience.
+- **Node.js**: The application is built to run on the Node.js runtime.
+- **TypeScript**: The entire codebase is written in TypeScript for type safety and improved developer experience.
 
-## Frameworks & Libraries
+## Backend Frameworks & Libraries
 
-*   **Express.js**: A minimal and flexible Node.js web application framework used to build the core web server and API endpoints.
-*   **Vercel AI SDK (`ai` and `@ai-sdk/openai-compatible`)**: Used for building AI-powered applications, specifically for creating OpenAI-compatible provider integrations and handling streaming responses.
-*   **Rate-Limiter-Flexible**: A library to manage and enforce rate limits for each provider based on requests and token counts.
-*   **Zod**: A TypeScript-first schema declaration and validation library. It is used to validate the structure and types of the main `config.jsonc` file, ensuring the application starts in a valid state.
-*   **Pino**: A high-performance, low-overhead logger used for all application logging. It is configured with `pino-pretty` for human-readable logs in development.
+- **Express.js**: A minimal and flexible Node.js web application framework used to build the core web server and API endpoints.
+- **Vercel AI SDK (`ai` and `@ai-sdk/openai-compatible`)**: Used for building AI-powered applications, specifically for creating OpenAI-compatible provider integrations and handling streaming responses.
+- **Rate-Limiter-Flexible**: A library to manage and enforce rate limits for each provider based on requests and token counts.
+- **Zod**: A TypeScript-first schema declaration and validation library. It is used to validate the structure and types of the main `config.jsonc` file, ensuring the application starts in a valid state.
+- **Pino**: A high-performance, low-overhead logger used for all application logging. It is configured with `pino-pretty` for human-readable logs in development.
+
+## UI Frameworks & Libraries
+
+- **SvelteKit**: A UI framework for building web applications of all sizes, with a beautiful development experience and flexible filesystem-based routing.
+- **Vite**: A next-generation frontend tooling that provides an extremely fast development environment and bundles code for production.
+- **Flowbite** and **Flowbite-Svelte**: UI component libraries that provide a set of accessible and responsive components built on top of Tailwind CSS.
 
 ## Development & Build Tools
 
-*   **pnpm**: The primary package manager for the project.
-*   **tsx**: A tool for executing TypeScript files directly. The development server is run using `pnpm -w -F server run dev`, which uses `tsx` for hot-reloading.
-*   **TypeScript Compiler (`tsc`)**: Used to compile the TypeScript source code into JavaScript for production builds.
-*   **Prettier**: Used for automated code formatting to maintain a consistent style.
+- **pnpm**: The primary package manager for the project. The project is a monorepo with multiple packages (`server`, `ui`).
+- **tsx**: A tool for executing TypeScript files directly. The backend development server is run using `pnpm -w -F server run dev`. The UI development server is run with `pnpm -w -F ui run dev`. Both commands work regardless of the current working directory.
+- **TypeScript Compiler (`tsc`)**: Used to compile the TypeScript source code into JavaScript for production builds.
+- **Prettier**: Used for automated code formatting to maintain a consistent style.
+- **Context7**: A service for retrieving up-to-date documentation and code examples for any library. It should be used to get API definitions where possible.
 
 ## Configuration
 
-*   **JSONC**: The configuration file format is JSON with Comments (`.jsonc`), allowing for comments within the configuration file for better documentation.
-*   **yargs**: A library for building interactive command-line tools, used here to parse command-line arguments, specifically for the path to the configuration file.
+- **JSONC**: The configuration file format is JSON with Comments (`.jsonc`), allowing for comments within the configuration file for better documentation.
+- **yargs**: A library for building interactive command-line tools, used here to parse command-line arguments, specifically for the path to the configuration file.

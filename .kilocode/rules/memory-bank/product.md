@@ -12,8 +12,8 @@ When a request comes in, the gateway intelligently routes it to the most suitabl
 
 ## Key Goals & User Experience
 
-*   **Resilience & Failover**: If a primary LLM provider is unavailable or has reached its rate limit, the gateway should automatically and seamlessly failover to a different provider that supports the requested model. The end-user or application should not be aware of this switch.
-*   **Cost Optimization**: The system is designed to help users stay within the free-tier or lower-cost limits offered by various providers. By monitoring usage for each provider, it can prioritize those that have not yet exceeded their limits.
-*   **Simplified Integration**: Developers can interact with multiple backend LLMs through a single, consistent API endpoint, drastically simplifying their application code. They don't need to write separate logic for each provider.
-*   **Centralized Control**: All provider details (API keys, models, rate limits) are managed in a single `config.jsonc` file, making it easy to add, remove, or modify provider configurations without changing code.
-*   **Extensibility**: The architecture is designed to be modular, allowing new LLM providers to be added with minimal effort.
+- **Resilience & Failover**: If a primary LLM provider is unavailable or has reached its rate limit, the gateway should automatically and seamlessly failover to a different provider that supports the requested model. The end-user or application should not be aware of this switch.
+- **Cost Optimization**: The system is designed to help users stay within the free-tier or lower-cost limits offered by various providers. By monitoring usage for each provider, it can prioritize those that have not yet exceeded their limits.
+- **Simplified Integration**: Developers can interact with multiple backend LLMs through a single, consistent API endpoint, drastically simplifying their application code. They don't need to write separate logic for each provider.
+- **Centralized Control & Monitoring**: All provider details (API keys, models, rate limits) are managed in a single configuration file. A web-based UI provides a dashboard to monitor usage, view the status of each provider, and manage the gateway's configuration.
+- **Extensibility**: The architecture is designed to be modular, allowing new LLM providers to be added with minimal effort.
