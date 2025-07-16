@@ -1,12 +1,12 @@
 {
-  "name": "cost-router-workspace",
+  "name": "cost-router",
   "private": true,
   "scripts": {
     "dev": "pnpm -r --parallel dev",
     "build": "pnpm -r build"
   },
   "devDependencies": {
-    "typescript": "^5.0.4"
+    "typescript": "^5.8.3"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
