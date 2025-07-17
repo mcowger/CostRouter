@@ -9,7 +9,7 @@
     ".": "./build/main.js"
   },
   "scripts": {
-    "dev": "tsx watch index.ts --config ~/workspace/CostRouter/config.jsonc",
+    "dev": "tsx watch --inspect index.ts  --config ~/workspace/CostRouter/config.jsonc",
     "build": "tsc",
     "start": "node ./build/index.js --config ~/workspace/CostRouter/config.jsonc",
     "format": "prettier --write .",
