@@ -1,7 +1,7 @@
 // src/components/ConfigManager.ts
 import { promises as fs } from 'fs';
-import { AppConfig, AppConfigSchema } from '../schemas/appConfig.schema.js';
-import { Provider } from '../schemas/provider.schema.js';
+import { AppConfig, AppConfigSchema } from '../../schemas/appConfig.schema.js';
+import { Provider } from '../../schemas/provider.schema';
 import { parse } from 'jsonc-parser';
 import yargs from "yargs/yargs";
 import { hideBin } from "yargs/helpers";

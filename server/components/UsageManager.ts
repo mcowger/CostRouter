@@ -1,8 +1,8 @@
 import { RateLimiterMemory, IRateLimiterOptions } from "rate-limiter-flexible";
 import { ConfigManager } from "./ConfigManager.js";
-import { Provider } from "../schemas/provider.schema.js";
+import { Provider } from "../../schemas/provider.schema.js";
 import { logger } from "./Logger.js";
-import { Limits } from "../schemas/limits.schema.js";
+import { Limits } from "../../schemas/limits.schema.js";
 import { getErrorMessage, formatDuration } from "./Utils.js";
 import { UsageDatabaseManager } from "./UsageDatabaseManager.js";
 
