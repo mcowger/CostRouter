@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import { LimitSchema } from './limits.schema.js';
-import { ModelSchema } from './model.schema.js';
+import { LimitSchema } from './limits.schema';
+import { ModelSchema } from './model.schema';
 
 /**
  * Zod schema for a single LLM provider configuration.

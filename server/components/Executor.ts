@@ -1,4 +1,4 @@
-import { Provider } from "../schemas/provider.schema.js";
+import { Provider } from "../../schemas/provider.schema.js";
 import { UsageManager } from "./UsageManager.js";
 import { logger } from "./Logger.js";
 import { Request, Response } from "express";

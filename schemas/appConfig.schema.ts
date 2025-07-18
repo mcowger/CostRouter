@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { ProviderSchema } from './provider.schema.js';
+import { ProviderSchema } from './provider.schema';
 
 /**
  * Zod schema for the main application configuration file (`config.json`).

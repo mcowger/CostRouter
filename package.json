@@ -4,14 +4,26 @@
   "private": true,
   "description": "An intelligent gateway for routing requests to LLM providers.",
   "type": "module",
-  "scripts": {
-  },
   "author": "",
   "license": "ISC",
+  "scripts": {
+    "dev:all": "concurrently \"pnpm -w -F server run dev\" \"pnpm -w -F ui run dev\"",
+    "dev:server": "pnpm -w -F server run dev",
+    "dev:ui": "pnpm -w -F ui run dev",
+    "build": "pnpm -w -F server run build && pnpm -w -F ui run build",
+    "build:server": "pnpm -w -F server run build",
+    "build:ui": "pnpm -w -F ui run build",
+    "start": "pnpm -w -F server run start",
+    "format": "prettier --write .",
+    "clean": "pnpm -w -F server run clean && rm -rf ui/dist",
+    "setup": "cp config.example.jsonc config.jsonc && echo 'Configuration file created. Please edit config.jsonc with your API keys.'"
+  },
   "dependencies": {
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "axios": "^1.10.0",
+    "concurrently": "^9.2.0",
     "prettier": "^3.6.2",
     "tsx": "^4.20.3",
     "typescript": "^5.8.3"

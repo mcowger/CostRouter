@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { PricingSchema } from './pricing.schema.js';
+import { PricingSchema } from './pricing.schema';
 
 /**
  * Zod schema for a single model configuration, including optional pricing.

@@ -1,12 +1,33 @@
 import { RateLimiterMemory, IRateLimiterOptions } from "rate-limiter-flexible";
 import { ConfigManager } from "./ConfigManager.js";
-import { Provider } from "../schemas/provider.schema.js";
+import { Provider } from "../../schemas/provider.schema.js";
 import { logger } from "./Logger.js";
-import { Limits } from "../schemas/limits.schema.js";
+import { Limits } from "../../schemas/limits.schema.js";
 import { getErrorMessage, formatDuration } from "./Utils.js";
 import { UsageDatabaseManager } from "./UsageDatabaseManager.js";
 
 type LimitType = keyof Limits;
+
+// Types for usage dashboard
+export interface LimitUsage {
+  consumed: number;
+  limit: number;
+  percentage: number;
+  msBeforeNext: number;
+  unit: 'requests' | 'tokens' | 'USD';
+}
+
+export interface ProviderUsage {
+  id: string;
+  limits: {
+    [key in LimitType]?: LimitUsage;
+  };
+}
+
+export interface UsageDashboardData {
+  providers: ProviderUsage[];
+  timestamp: number;
+}
 
 // A multiplier to convert decimal currency into integer points for the limiter.
 // Using 10000 points = $1.00, so 1 point = $0.0001 (1/100th of a cent).
@@ -180,5 +201,77 @@ export class UsageManager {
       // This catch will trigger if a limit is exceeded upon consumption.
       logger.warn(`Rate limit exceeded for provider '${providerId}' on consumption: ${getErrorMessage(error)}`);
     }
+  }
+
+  /**
+   * Gets current usage data for all providers for the dashboard.
+   */
+  public async getCurrentUsageData(): Promise<UsageDashboardData> {
+    const providers = ConfigManager.getProviders();
+    const providerUsages: ProviderUsage[] = [];
+
+    // Define limit configurations with their units
+    const limitConfigs: [LimitType, 'requests' | 'tokens' | 'USD'][] = [
+      ["requestsPerMinute", "requests"], ["requestsPerHour", "requests"], ["requestsPerDay", "requests"],
+      ["tokensPerMinute", "tokens"], ["tokensPerHour", "tokens"], ["tokensPerDay", "tokens"],
+      ["costPerMinute", "USD"], ["costPerHour", "USD"], ["costPerDay", "USD"],
+    ];
+
+    for (const provider of providers) {
+      const providerUsage: ProviderUsage = {
+        id: provider.id,
+        limits: {}
+      };
+
+      if (provider.limits) {
+        for (const [limitType, unit] of limitConfigs) {
+          const limitValue = provider.limits[limitType];
+          if (limitValue) {
+            const key = `${provider.id}/${limitType}`;
+            const limiter = this.limiters.get(key);
+
+            if (limiter) {
+              try {
+                const res = await limiter.get(provider.id);
+                let consumed = 0;
+                let limit = limitValue;
+                let msBeforeNext = 0;
+
+                if (res) {
+                  consumed = res.consumedPoints;
+                  msBeforeNext = res.msBeforeNext;
+                }
+
+                // Convert cost points back to USD for display
+                if (unit === 'USD') {
+                  consumed = consumed / COST_MULTIPLIER;
+                  // limit is already in USD from config
+                }
+
+                const percentage = limit > 0 ? Math.round((consumed / limit) * 100) : 0;
+
+                providerUsage.limits[limitType] = {
+                  consumed,
+                  limit,
+                  percentage,
+                  msBeforeNext,
+                  unit
+                };
+              } catch (error) {
+                logger.warn(`Error getting usage data for ${key}: ${getErrorMessage(error)}`);
+                // Continue with other limiters even if one fails
+              }
+            }
+          }
+        }
+      }
+
+      providerUsages.push(providerUsage);
+    }
+
+    return {
+      providers: providerUsages,
+      timestamp: Date.now()
+    };
   }
 }

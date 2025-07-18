@@ -2,46 +2,57 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "RUn Dev",
+      "name": "Backend",
       "request": "launch",
+      "type": "node",
+      "skipFiles": [
+        "<node_internal>/**"
+      ],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "outputCapture": "std",
+      "runtimeExecutable": "pnpm",
       "runtimeArgs": [
+        "-w",
+        "-F",
+        "server",
         "run",
         "dev"
-      ],
-      "runtimeExecutable": "pnpm",
+      ]
+    },
+    {
+      "name": "Frontend",
+      "request": "launch",
+      "type": "node",
       "skipFiles": [
-        "<node_internals>/**"
+        "<node_internal>/**"
       ],
-      "type": "node",
-      "console": "internalConsole",
-      "internalConsoleOptions": "openOnSessionStart",
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
       "outputCapture": "std",
-    },
-
-    {
-      "type": "node",
-      "request": "launch",
-      "name": "Run Script: sendChatCompletion",
-      "program": "${workspaceFolder}/scripts/sendChatCompletion.ts",
-      "runtimeExecutable": "pnpx",
+      "showAsyncStacks": true,
+      "runtimeExecutable": "pnpm",
       "runtimeArgs": [
-        "tsx"
-      ],
-      "env": {
-        "PORT": "3000"
-      }
-    },
+        "-w",
+        "-F",
+        "ui",
+        "run",
+        "dev"
+      ]
+    }
+  ],
+  "compounds": [
     {
-      "type": "node",
-      "request": "launch",
-      "name": "Start (Build & Run)",
-      "program": "${workspaceFolder}/build/main.js",
-      "args": [
-        "--config",
-        "./data/config.json"
+      "name": "All",
+      "configurations": [
+        "Backend",
+        "Frontend"
       ],
-      "env": {
-        "PORT": "3000"
+      "stopAll": true,
+      "presentation": {
+        "hidden": false,
+        "group": "",
+        "order": 1
       }
     }
   ]
