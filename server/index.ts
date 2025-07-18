@@ -150,7 +150,7 @@ async function main() {
     try {
       const { hours = '24', model, providerId } = req.query;
       const dbManager = UsageDatabaseManager.getInstance();
-      const records = await dbManager.getUsage(parseInt(hours as string, 10), {
+      const records = await dbManager.getUsage(parseFloat(hours as string), {
         model: model as string,
         providerId: providerId as string,
       });
