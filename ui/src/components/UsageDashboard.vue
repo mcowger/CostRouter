@@ -169,8 +169,7 @@ onUnmounted(() => {
 <style scoped>
 .usage-dashboard {
   padding: 20px;
-  max-width: 1200px;
-  margin: 0 auto;
+  width: 100%;
 }
 
 .usage-dashboard h2 {
@@ -194,7 +193,7 @@ onUnmounted(() => {
 
 .dashboard-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 20px;
   margin-bottom: 20px;
 }
@@ -302,15 +301,55 @@ onUnmounted(() => {
   margin-top: 20px;
 }
 
+/* Responsive breakpoints for better card layout */
+@media (max-width: 1200px) {
+  .dashboard-grid {
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .dashboard-grid {
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  }
+}
+
 @media (max-width: 768px) {
   .dashboard-grid {
     grid-template-columns: 1fr;
+    gap: 15px;
   }
-  
+
+  .provider-card {
+    padding: 15px;
+  }
+
   .limit-header {
     flex-direction: column;
     align-items: flex-start;
     gap: 4px;
+  }
+
+  .limit-values {
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 480px) {
+  .usage-dashboard {
+    padding: 15px;
+  }
+
+  .dashboard-grid {
+    gap: 10px;
+  }
+
+  .provider-card {
+    padding: 12px;
+  }
+
+  .provider-title {
+    font-size: 16px;
   }
 }
 </style>

@@ -61,6 +61,73 @@ The primary goal is to provide a resilient and cost-effective way to interact wi
 
 The server will start on port 3000 by default.
 
+## Usage Dashboard
+
+The LLM Gateway includes a real-time usage dashboard that provides visibility into rate limit consumption across all configured providers.
+
+### Accessing the Dashboard
+
+1. Start both the server and UI:
+   ```bash
+   # Terminal 1: Start the server
+   cd server && npm run dev
+
+   # Terminal 2: Start the UI
+   cd ui && npm run dev
+   ```
+
+2. Open your browser and navigate to `http://localhost:5173/`
+
+3. Click on the "Usage Dashboard" tab to view real-time usage metrics
+
+### Dashboard Features
+
+- **Real-time Updates**: Automatically refreshes every second
+- **Provider Cards**: Shows one card per configured provider
+- **Usage Metrics**: Displays current consumption vs. limits for:
+  - Requests per minute/hour/day
+  - Tokens per minute/hour/day
+  - Cost per minute/hour/day (in USD)
+- **Visual Indicators**: Color-coded progress bars (green/yellow/red)
+- **Reset Timers**: Shows when limits will reset
+- **Responsive Design**: Works on desktop and mobile devices
+
+### Testing the Dashboard
+
+To test the dashboard with simulated usage data, you can use the simulation endpoint:
+
+```bash
+# Simulate usage for a provider
+curl -X POST http://localhost:3000/usage/simulate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "providerId": "openroutera",
+    "tokens": 500,
+    "cost": 0.05
+  }'
+
+# Simulate usage for another provider
+curl -X POST http://localhost:3000/usage/simulate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "providerId": "openrouterb",
+    "tokens": 200,
+    "cost": 0.02
+  }'
+```
+
+**Parameters:**
+- `providerId` (string): The ID of the provider to simulate usage for (must match a configured provider)
+- `tokens` (number, optional): Number of tokens to consume (default: 100)
+- `cost` (number, optional): Cost in USD to consume (default: 0.01)
+
+The simulated usage will immediately appear in the dashboard, allowing you to see how the real-time monitoring works.
+
+### API Endpoints
+
+- `GET /usage/current` - Returns current usage data for all providers
+- `POST /usage/simulate` - Simulates usage for testing (development only)
+
 ## Dependencies
 
 ### Production Dependencies
