@@ -75,11 +75,6 @@ async function main() {
   app.use(express.json());
   app.use(cors());
 
-  // --- Static UI Serving ---
-  const __filename = fileURLToPath(import.meta.url);
-  const __dirname = path.dirname(__filename);
-  const uiBuildPath = path.join(__dirname, '../../ui/build');
-  app.use(express.static(uiBuildPath));
   // Apply response body logging middleware
   app.use(responseBodyLogger);
   // Apply request and response logging middleware
@@ -211,6 +206,17 @@ async function main() {
       logger.error(`Failed to simulate usage: ${message}`);
       res.status(500).json({ error: "Failed to simulate usage." });
     }
+  });
+
+  // --- Static UI Serving (after API routes) ---
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = path.dirname(__filename);
+  const uiBuildPath = path.join(__dirname, '../../ui/build');
+  app.use(express.static(uiBuildPath));
+
+  // Catch-all handler: send back React's index.html file for any non-API routes
+  app.get('*', (_req, res) => {
+    res.sendFile(path.join(uiBuildPath, 'index.html'));
   });
 
   const PORT = process.env.PORT || 3000;

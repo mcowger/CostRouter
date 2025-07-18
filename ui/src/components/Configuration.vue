@@ -1,15 +1,31 @@
 <template>
   <div class="configuration">
     <h2>Provider Configuration</h2>
-    
+
+    <!-- Save Button Section -->
+    <div v-if="!isLoading && !error" class="save-section">
+      <button
+        @click="saveConfiguration"
+        :disabled="isSaving"
+        class="save-button"
+      >
+        {{ isSaving ? 'Saving...' : 'Save Configuration' }}
+      </button>
+
+      <!-- Success/Error Messages -->
+      <div v-if="saveMessage" class="save-message" :class="saveMessageType">
+        {{ saveMessage }}
+      </div>
+    </div>
+
     <div v-if="isLoading" class="loading">
       Loading configuration...
     </div>
-    
+
     <div v-else-if="error" class="error">
       Error: {{ error }}
     </div>
-    
+
     <div v-else class="config-grid">
       <div 
         v-for="(provider, index) in config.providers" 
@@ -135,86 +151,92 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import type { AppConfig } from '../../../schemas/appConfig.schema';
+import { AppConfigSchema } from '../../../schemas/appConfig.schema';
 import type { Provider } from '../../../schemas/provider.schema';
 
 const config = ref<AppConfig>({ providers: [] });
 const isLoading = ref<boolean>(true);
 const error = ref<string | null>(null);
 
+// Save functionality state
+const isSaving = ref<boolean>(false);
+const saveMessage = ref<string>('');
+const saveMessageType = ref<'success' | 'error'>('success');
+
 onMounted(async () => {
   try {
-    // TODO: Uncomment this section to fetch from server
-    // const response = await fetch('/config/get');
-    // if (!response.ok) {
-    //   throw new Error('Failed to load configuration.');
-    // }
-    // config.value = await response.json();
+    // Fetch configuration from server
+    const response = await fetch('http://localhost:3000/config/get');
+    if (!response.ok) {
+      throw new Error('Failed to load configuration.');
+    }
+    config.value = await response.json();
 
-    // Mock data for development (remove when server is ready)
-    await new Promise(resolve => setTimeout(resolve, 500)); // Simulate loading
-    config.value = {
-      providers: [
-        {
-          id: "openroutera",
-          type: "openai",
-          baseURL: "https://openrouter.ai/api/v1",
-          apiKey: "sk-or-v1-",
-          limits: {
-            requestsPerMinute: 2,
-            requestsPerHour: 10,
-            requestsPerDay: 100,
-            tokensPerMinute: 1000,
-            tokensPerHour: 5000,
-            tokensPerDay: 10000,
-            costPerDay: 1.00
-          },
-          models: [
-            {
-              name: "moonshotai/kimi-k2:free",
-              pricing: {
-                inputCostPerMillionTokens: 5.0,
-                outputCostPerMillionTokens: 15.0,
-                costPerRequest: 0.0001
-              }
-            }
-          ]
-        },
-        {
-          id: "openrouterb",
-          type: "openai",
-          baseURL: "https://openrouter.ai/api/v1",
-          apiKey: "sk-or-v1-",
-          limits: {
-            requestsPerMinute: 2,
-            requestsPerHour: 10,
-            requestsPerDay: 100,
-            tokensPerMinute: 1000,
-            tokensPerHour: 5000,
-            tokensPerDay: 10000,
-            costPerDay: 1.00
-          },
-          models: [
-            {
-              name: "moonshotai/kimi-k2:free",
-              pricing: {
-                inputCostPerMillionTokens: 5.0,
-                outputCostPerMillionTokens: 15.0,
-                costPerRequest: 0.0001
-              }
-            }
-          ]
-        },
-        {
-          id: "copilot-provider",
-          type: "copilot",
-          models: [
-            { name: "gpt-4" },
-            { name: "gpt-4.1" },
-            { name: "gpt-4o" }
-          ]
-        }
-      ]
-    };
+    // Fallback mock data for development (if server is not available)
+    // await new Promise(resolve => setTimeout(resolve, 500)); // Simulate loading
+    // config.value = {
+    //   providers: [
+    //     {
+    //       id: "openroutera",
+    //       type: "openai",
+    //       baseURL: "https://openrouter.ai/api/v1",
+    //       apiKey: "sk-or-v1-",
+    //       limits: {
+    //         requestsPerMinute: 2,
+    //         requestsPerHour: 10,
+    //         requestsPerDay: 100,
+    //         tokensPerMinute: 1000,
+    //         tokensPerHour: 5000,
+    //         tokensPerDay: 10000,
+    //         costPerDay: 1.00
+    //       },
+    //       models: [
+    //         {
+    //           name: "moonshotai/kimi-k2:free",
+    //           pricing: {
+    //             inputCostPerMillionTokens: 5.0,
+    //             outputCostPerMillionTokens: 15.0,
+    //             costPerRequest: 0.0001
+    //           }
+    //         }
+    //       ]
+    //     },
+    //     {
+    //       id: "openrouterb",
+    //       type: "openai",
+    //       baseURL: "https://openrouter.ai/api/v1",
+    //       apiKey: "sk-or-v1-",
+    //       limits: {
+    //         requestsPerMinute: 2,
+    //         requestsPerHour: 10,
+    //         requestsPerDay: 100,
+    //         tokensPerMinute: 1000,
+    //         tokensPerHour: 5000,
+    //         tokensPerDay: 10000,
+    //         costPerDay: 1.00
+    //       },
+    //       models: [
+    //         {
+    //           name: "moonshotai/kimi-k2:free",
+    //           pricing: {
+    //             inputCostPerMillionTokens: 5.0,
+    //             outputCostPerMillionTokens: 15.0,
+    //             costPerRequest: 0.0001
+    //           }
+    //         }
+    //       ]
+    //     },
+    //     {
+    //       id: "copilot-provider",
+    //       type: "copilot",
+    //       models: [
+    //         { name: "gpt-4" },
+    //         { name: "gpt-4.1" },
+    //         { name: "gpt-4o" }
+    //       ]
+    //     }
+    //   ]
+    // };
   } catch (e: any) {
     error.value = e.message;
   } finally {
@@ -236,6 +258,55 @@ const formatPricingKey = (key: string): string => {
     .replace(/cost/gi, 'Cost')
     .replace(/per/gi, 'Per');
 };
+
+// Save configuration function
+const saveConfiguration = async (): Promise<void> => {
+  // Clear previous messages
+  saveMessage.value = '';
+  isSaving.value = true;
+
+  try {
+    // Validate the configuration against the schema
+    const validatedConfig = AppConfigSchema.parse(config.value);
+
+    // Send POST request to /config/set endpoint
+    const response = await fetch('http://localhost:3000/config/set', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(validatedConfig),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ error: 'Unknown server error' }));
+      throw new Error(errorData.error || `Server error: ${response.status}`);
+    }
+
+    const result = await response.json();
+    saveMessage.value = result.message || 'Configuration saved successfully!';
+    saveMessageType.value = 'success';
+
+    // Clear success message after 3 seconds
+    setTimeout(() => {
+      saveMessage.value = '';
+    }, 3000);
+
+  } catch (validationError: any) {
+    // Handle validation errors
+    if (validationError.name === 'ZodError') {
+      const errorMessages = validationError.errors.map((err: any) =>
+        `${err.path.join('.')}: ${err.message}`
+      ).join(', ');
+      saveMessage.value = `Validation error: ${errorMessages}`;
+    } else {
+      saveMessage.value = validationError.message || 'Failed to save configuration';
+    }
+    saveMessageType.value = 'error';
+  } finally {
+    isSaving.value = false;
+  }
+};
 </script>
 
 <style scoped>
@@ -248,6 +319,63 @@ const formatPricingKey = (key: string): string => {
   text-align: center;
   margin-bottom: 30px;
   color: var(--color-heading);
+}
+
+.save-section {
+  text-align: center;
+  margin-bottom: 30px;
+  padding: 20px;
+  background: var(--color-background-soft);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+}
+
+.save-button {
+  background: #3498db;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 6px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 180px;
+}
+
+.save-button:hover:not(:disabled) {
+  background: #2980b9;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(52, 152, 219, 0.3);
+}
+
+.save-button:disabled {
+  background: #bdc3c7;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.save-message {
+  margin-top: 15px;
+  padding: 10px 15px;
+  border-radius: 4px;
+  font-weight: 500;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.save-message.success {
+  background: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.save-message.error {
+  background: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
 }
 
 .loading, .error {
