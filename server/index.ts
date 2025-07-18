@@ -176,6 +176,43 @@ async function main() {
     }
   });
 
+  // --- 8. Usage Dashboard API Route ---
+  app.get("/usage/current", async (_req, res) => {
+    try {
+      const usageData = await usageManager.getCurrentUsageData();
+      res.json(usageData);
+    } catch (error) {
+      const message = getErrorMessage(error);
+      logger.error(`Failed to get current usage data: ${message}`);
+      res.status(500).json({ error: "Failed to retrieve current usage data." });
+    }
+  });
+
+  // --- 9. Test Usage Simulation Route (for testing the dashboard) ---
+  app.post("/usage/simulate", async (req, res) => {
+    try {
+      const { providerId = "openroutera", tokens = 100, cost = 0.01 } = req.body;
+
+      await usageManager.consume(
+        providerId,
+        "test-model",
+        { promptTokens: Math.floor(tokens * 0.7), completionTokens: Math.floor(tokens * 0.3) },
+        cost
+      );
+
+      res.json({
+        message: `Simulated usage for provider ${providerId}: ${tokens} tokens, $${cost}`,
+        providerId,
+        tokens,
+        cost
+      });
+    } catch (error) {
+      const message = getErrorMessage(error);
+      logger.error(`Failed to simulate usage: ${message}`);
+      res.status(500).json({ error: "Failed to simulate usage." });
+    }
+  });
+
   const PORT = process.env.PORT || 3000;
   app.listen(PORT, () => {
     logger.info(`LLM Gateway listening on port ${PORT}`);
