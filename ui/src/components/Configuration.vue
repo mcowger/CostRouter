@@ -20,8 +20,14 @@
         
         <div class="form-section">
           <div class="form-group">
-            <label>ID:</label>
-            <span class="readonly-field">{{ provider.id }}</span>
+            <label for="id">ID:</label>
+            <input
+              type="text"
+              v-model="provider.id"
+              id="id"
+              class="form-input"
+              placeholder="provider-id"
+            />
           </div>
           
           <div class="form-group">
@@ -314,10 +320,10 @@ const formatPricingKey = (key: string): string => {
 
 .readonly-field {
   padding: 8px 12px;
-  background: #f8f9fa;
+  background: var(--color-background-mute);
   border: 1px solid var(--color-border);
   border-radius: 4px;
-  color: var(--color-text);
+  color: var(--color-heading);
   font-family: monospace;
 }
 
