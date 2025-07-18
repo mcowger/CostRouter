@@ -2,6 +2,7 @@
 import { onMounted, ref } from 'vue';
 import { useConfigStore } from './stores/config';
 import UsageDashboard from './components/UsageDashboard.vue';
+import Configuration from './components/Configuration.vue';
 
 const configStore = useConfigStore();
 const activeTab = ref<'dashboard' | 'config'>('dashboard');
@@ -36,15 +37,7 @@ onMounted(() => {
     <main class="app-main">
       <UsageDashboard v-if="activeTab === 'dashboard'" />
 
-      <div v-else-if="activeTab === 'config'" class="config-section">
-        <h2>Configuration</h2>
-        <div v-if="configStore.loading">Loading configuration...</div>
-        <div v-else-if="configStore.error" class="error">{{ configStore.error }}</div>
-        <div v-else-if="configStore.config">
-          <pre>{{ JSON.stringify(configStore.config, null, 2) }}</pre>
-        </div>
-        <div v-else>No configuration loaded.</div>
-      </div>
+      <Configuration v-else-if="activeTab === 'config'" />
     </main>
   </div>
 </template>
