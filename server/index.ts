@@ -75,11 +75,6 @@ async function main() {
   app.use(express.json());
   app.use(cors());
 
-  // --- Static UI Serving ---
-  const __filename = fileURLToPath(import.meta.url);
-  const __dirname = path.dirname(__filename);
-  const uiBuildPath = path.join(__dirname, '../../ui/build');
-  app.use(express.static(uiBuildPath));
   // Apply response body logging middleware
   app.use(responseBodyLogger);
   // Apply request and response logging middleware
@@ -150,7 +145,7 @@ async function main() {
     try {
       const { hours = '24', model, providerId } = req.query;
       const dbManager = UsageDatabaseManager.getInstance();
-      const records = await dbManager.getUsage(parseInt(hours as string, 10), {
+      const records = await dbManager.getUsage(parseFloat(hours as string), {
         model: model as string,
         providerId: providerId as string,
       });
@@ -174,6 +169,54 @@ async function main() {
       logger.error(`Failed to prune usage data: ${message}`);
       res.status(500).json({ error: "Failed to prune usage data." });
     }
+  });
+
+  // --- 8. Usage Dashboard API Route ---
+  app.get("/usage/current", async (_req, res) => {
+    try {
+      const usageData = await usageManager.getCurrentUsageData();
+      res.json(usageData);
+    } catch (error) {
+      const message = getErrorMessage(error);
+      logger.error(`Failed to get current usage data: ${message}`);
+      res.status(500).json({ error: "Failed to retrieve current usage data." });
+    }
+  });
+
+  // --- 9. Test Usage Simulation Route (for testing the dashboard) ---
+  app.post("/usage/simulate", async (req, res) => {
+    try {
+      const { providerId = "openroutera", tokens = 100, cost = 0.01 } = req.body;
+
+      await usageManager.consume(
+        providerId,
+        "test-model",
+        { promptTokens: Math.floor(tokens * 0.7), completionTokens: Math.floor(tokens * 0.3) },
+        cost
+      );
+
+      res.json({
+        message: `Simulated usage for provider ${providerId}: ${tokens} tokens, $${cost}`,
+        providerId,
+        tokens,
+        cost
+      });
+    } catch (error) {
+      const message = getErrorMessage(error);
+      logger.error(`Failed to simulate usage: ${message}`);
+      res.status(500).json({ error: "Failed to simulate usage." });
+    }
+  });
+
+  // --- Static UI Serving (after API routes) ---
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = path.dirname(__filename);
+  const uiBuildPath = path.join(__dirname, '../../ui/build');
+  app.use(express.static(uiBuildPath));
+
+  // Catch-all handler: send back React's index.html file for any non-API routes
+  app.get('*', (_req, res) => {
+    res.sendFile(path.join(uiBuildPath, 'index.html'));
   });
 
   const PORT = process.env.PORT || 3000;
