@@ -97,9 +97,9 @@ onMounted(() => {
 }
 
 .tab-button.active {
-  background: var(--color-heading);
-  color: white;
-  border-color: var(--color-heading);
+  background: #3498db;
+  color: white !important;
+  border-color: #3498db;
 }
 
 .app-main {

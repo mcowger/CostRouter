@@ -19,34 +19,40 @@
         <h3 class="provider-title">{{ provider.id }}</h3>
         
         <div class="limits-container">
-          <div 
-            v-for="(usage, limitType) in provider.limits" 
-            :key="limitType"
-            class="limit-item"
-          >
-            <div class="limit-header">
-              <span class="limit-name">{{ formatLimitName(limitType as string) }}</span>
-              <span class="limit-values">
-                {{ formatValue(usage.consumed, usage.unit) }} / {{ formatValue(usage.limit, usage.unit) }}
-              </span>
-            </div>
-            
-            <div class="progress-bar-container">
-              <div 
-                class="progress-bar"
-                :class="getProgressBarClass(usage.percentage)"
-                :style="{ width: Math.min(usage.percentage, 100) + '%' }"
-              ></div>
-            </div>
-            
-            <div class="limit-details">
-              <span class="percentage">{{ usage.percentage }}%</span>
-              <span class="reset-time" v-if="usage.msBeforeNext > 0">
-                Resets in {{ formatTimeRemaining(usage.msBeforeNext) }}
-              </span>
+          <!-- Group limits by type (requests, tokens, cost) -->
+          <div v-for="group in getLimitGroups(provider.limits)" :key="group.type" class="limit-group">
+            <h4 class="group-title">{{ group.title }}</h4>
+            <div class="group-items">
+              <div
+                v-for="item in group.items"
+                :key="item.period"
+                class="compact-limit-item"
+              >
+                <div class="compact-header">
+                  <span class="period-label">{{ item.period }}</span>
+                  <span class="compact-values">
+                    {{ formatValue(item.usage.consumed, item.usage.unit) }} / {{ formatValue(item.usage.limit, item.usage.unit) }}
+                  </span>
+                  <span class="compact-percentage" :class="getProgressBarClass(item.usage.percentage)">
+                    {{ item.usage.percentage }}%
+                  </span>
+                </div>
+
+                <div class="compact-progress-container">
+                  <div
+                    class="compact-progress-bar"
+                    :class="getProgressBarClass(item.usage.percentage)"
+                    :style="{ width: Math.min(item.usage.percentage, 100) + '%' }"
+                  ></div>
+                </div>
+
+                <div v-if="item.usage.msBeforeNext > 0" class="compact-reset-time">
+                  Resets in {{ formatTimeRemaining(item.usage.msBeforeNext) }}
+                </div>
+              </div>
             </div>
           </div>
-          
+
           <!-- Show message if no limits are configured -->
           <div v-if="Object.keys(provider.limits).length === 0" class="no-limits">
             No rate limits configured for this provider
@@ -58,11 +64,15 @@
     <div v-if="usageData" class="last-updated">
       Last updated: {{ formatTimestamp(usageData.timestamp) }}
     </div>
+
+    <!-- Historical Data Sparklines -->
+    <HistoricalSparklines />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue';
+import HistoricalSparklines from './HistoricalSparklines.vue';
 
 // Types matching the server-side interfaces
 interface LimitUsage {
@@ -107,19 +117,51 @@ const fetchUsageData = async () => {
   }
 };
 
-const formatLimitName = (limitType: string): string => {
-  const nameMap: { [key: string]: string } = {
-    requestsPerMinute: 'Requests/min',
-    requestsPerHour: 'Requests/hour',
-    requestsPerDay: 'Requests/day',
-    tokensPerMinute: 'Tokens/min',
-    tokensPerHour: 'Tokens/hour',
-    tokensPerDay: 'Tokens/day',
-    costPerMinute: 'Cost/min',
-    costPerHour: 'Cost/hour',
-    costPerDay: 'Cost/day'
+const getLimitGroups = (limits: { [key: string]: LimitUsage }) => {
+  const groups = [
+    {
+      type: 'requests',
+      title: 'Requests',
+      items: [] as Array<{ period: string; usage: LimitUsage }>
+    },
+    {
+      type: 'tokens',
+      title: 'Tokens',
+      items: [] as Array<{ period: string; usage: LimitUsage }>
+    },
+    {
+      type: 'cost',
+      title: 'Cost',
+      items: [] as Array<{ period: string; usage: LimitUsage }>
+    }
+  ];
+
+  // Map limit types to their groups and periods
+  const limitMapping: { [key: string]: { groupIndex: number; period: string } } = {
+    requestsPerMinute: { groupIndex: 0, period: 'per minute' },
+    requestsPerHour: { groupIndex: 0, period: 'per hour' },
+    requestsPerDay: { groupIndex: 0, period: 'per day' },
+    tokensPerMinute: { groupIndex: 1, period: 'per minute' },
+    tokensPerHour: { groupIndex: 1, period: 'per hour' },
+    tokensPerDay: { groupIndex: 1, period: 'per day' },
+    costPerMinute: { groupIndex: 2, period: 'per minute' },
+    costPerHour: { groupIndex: 2, period: 'per hour' },
+    costPerDay: { groupIndex: 2, period: 'per day' }
   };
-  return nameMap[limitType] || limitType;
+
+  // Populate groups with available limits
+  Object.entries(limits).forEach(([limitType, usage]) => {
+    const mapping = limitMapping[limitType];
+    if (mapping) {
+      groups[mapping.groupIndex].items.push({
+        period: mapping.period,
+        usage
+      });
+    }
+  });
+
+  // Return only groups that have items
+  return groups.filter(group => group.items.length > 0);
 };
 
 const formatValue = (value: number, unit: string): string => {
@@ -216,75 +258,117 @@ onUnmounted(() => {
 .limits-container {
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: 12px;
 }
 
-.limit-item {
+.limit-group {
   background: var(--color-background);
-  padding: 12px;
+  padding: 10px;
   border-radius: 6px;
   border: 1px solid var(--color-border);
 }
 
-.limit-header {
+.group-title {
+  margin: 0 0 8px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-heading);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.group-items {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.compact-limit-item {
+  padding: 6px 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.compact-limit-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.compact-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;
+  margin-bottom: 4px;
+  gap: 0px;
 }
 
-.limit-name {
+.period-label {
   font-weight: 500;
   color: var(--color-text);
+  font-size: 13px;
+  min-width: 80px;
 }
 
-.limit-values {
+.compact-values {
   font-family: monospace;
-  font-size: 14px;
+  font-size: 12px;
   color: var(--color-text);
+  flex: 1;
+  text-align: center;
+  white-space: nowrap;
 }
 
-.progress-bar-container {
+.compact-percentage {
+  font-weight: 600;
+  font-size: 12px;
+  min-width: 35px;
+  text-align: right;
+}
+
+.compact-percentage.success {
+  color: #27ae60;
+}
+
+.compact-percentage.warning {
+  color: #f39c12;
+}
+
+.compact-percentage.danger {
+  color: #e74c3c;
+}
+
+.compact-progress-container {
   width: 100%;
   height: 8px;
   background-color: #e0e0e0;
   border-radius: 4px;
   overflow: hidden;
-  margin-bottom: 8px;
+  margin-bottom: 2px;
 }
 
-.progress-bar {
+.compact-progress-bar {
   height: 100%;
   transition: width 0.3s ease;
   border-radius: 4px;
 }
 
-.progress-bar.success {
+.compact-progress-bar.success {
   background-color: #27ae60;
 }
 
-.progress-bar.warning {
+.compact-progress-bar.warning {
   background-color: #f39c12;
 }
 
-.progress-bar.danger {
+.compact-progress-bar.danger {
   background-color: #e74c3c;
 }
 
-.limit-details {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 12px;
+.compact-reset-time {
+  font-size: 10px;
   color: var(--color-text);
-}
-
-.percentage {
-  font-weight: 600;
-}
-
-.reset-time {
   font-style: italic;
+  text-align: right;
+  opacity: 0.8;
 }
 
 .no-limits {
@@ -324,14 +408,25 @@ onUnmounted(() => {
     padding: 15px;
   }
 
-  .limit-header {
+  .compact-header {
     flex-direction: column;
     align-items: flex-start;
-    gap: 4px;
+    gap: 2px;
   }
 
-  .limit-values {
-    font-size: 13px;
+  .compact-values {
+    font-size: 11px;
+    text-align: left;
+  }
+
+  .period-label {
+    font-size: 12px;
+    min-width: auto;
+  }
+
+  .compact-percentage {
+    font-size: 11px;
+    text-align: left;
   }
 }
 
@@ -350,6 +445,14 @@ onUnmounted(() => {
 
   .provider-title {
     font-size: 16px;
+  }
+
+  .group-title {
+    font-size: 12px;
+  }
+
+  .limit-group {
+    padding: 8px;
   }
 }
 </style>
