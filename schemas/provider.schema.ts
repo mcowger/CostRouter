@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import { LimitSchema } from './limits.schema';
 import { ModelSchema } from './model.schema';
 
 /**
@@ -19,10 +18,10 @@ export const ProviderSchema = z
     /** The API key (required if type is 'openai') */
     apiKey: z.string().optional(),
 
-    /** Optional rate limits */
-    limits: LimitSchema.optional(),
+    /** OAuth token (required if type is 'copilot') */
+    oauthToken: z.string().optional(),
 
-    /** Supported models, each with optional pricing. */
+    /** Supported models, each with optional pricing and limits. */
     models: z.array(ModelSchema).min(1, "At least one model must be listed"),
   })
   .refine((data) => data.type !== "openai" || (data.baseURL && data.apiKey), {

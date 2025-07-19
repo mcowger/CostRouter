@@ -80,27 +80,7 @@
             </div>
           </div>
           
-          <!-- Limits Accordion -->
-          <details v-if="provider.limits" class="accordion">
-            <summary class="accordion-header">Rate Limits</summary>
-            <div class="accordion-content">
-              <div 
-                v-for="(value, key) in provider.limits" 
-                :key="key" 
-                class="form-group"
-              >
-                <label :for="key">{{ formatLimitKey(key) }}:</label>
-                <input 
-                  type="number" 
-                  v-model="provider.limits[key]" 
-                  :id="key" 
-                  class="form-input"
-                  step="0.01"
-                  min="0"
-                />
-              </div>
-            </div>
-          </details>
+
           
           <!-- Models Accordion -->
           <details v-if="provider.models && provider.models.length" class="accordion">
@@ -124,17 +104,36 @@
                 <!-- Model Pricing -->
                 <div v-if="model.pricing" class="pricing-section">
                   <h5>Pricing</h5>
-                  <div 
-                    v-for="(value, key) in model.pricing" 
-                    :key="key" 
+                  <div
+                    v-for="(value, key) in model.pricing"
+                    :key="key"
                     class="form-group"
                   >
                     <label>{{ formatPricingKey(key) }}:</label>
-                    <input 
-                      type="number" 
-                      v-model="model.pricing[key]" 
+                    <input
+                      type="number"
+                      v-model="model.pricing[key]"
                       class="form-input"
                       step="0.0001"
+                      min="0"
+                    />
+                  </div>
+                </div>
+
+                <!-- Model Rate Limits -->
+                <div v-if="model.limits" class="limits-section">
+                  <h5>Rate Limits</h5>
+                  <div
+                    v-for="(value, key) in model.limits"
+                    :key="key"
+                    class="form-group"
+                  >
+                    <label>{{ formatLimitKey(key) }}:</label>
+                    <input
+                      type="number"
+                      v-model="model.limits[key]"
+                      class="form-input"
+                      step="0.01"
                       min="0"
                     />
                   </div>
@@ -505,6 +504,19 @@ const saveConfiguration = async (): Promise<void> => {
 }
 
 .pricing-section h5 {
+  margin: 0 0 10px 0;
+  color: var(--color-heading);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.limits-section {
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid var(--color-border);
+}
+
+.limits-section h5 {
   margin: 0 0 10px 0;
   color: var(--color-heading);
   font-size: 14px;

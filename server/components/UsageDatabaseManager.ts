@@ -3,7 +3,7 @@ import { JSONFile } from 'lowdb/node';
 import { subHours, isBefore, parseISO } from 'date-fns';
 import { UsageDatabase, UsageRecord, UsageRecordSchema } from '../../schemas/usage.schema.js';
 import { logger } from './Logger.js';
-import { getErrorMessage } from './Utils.js';
+
 
 type UsageRecordInput = Omit<UsageRecord, 'timestamp' | 'totalTokens'>;
 

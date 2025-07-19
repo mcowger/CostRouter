@@ -5,11 +5,13 @@
 
 # Configuration
 API_URL="http://localhost:3000/usage/simulate"
-PROVIDERS=("openroutera" "openrouterb" "copilot-provider")
+PROVIDERS=("openroutera" "openrouterb")
+# Model names that exist in the configuration
+MODELS=("moonshotai/kimi-k2:free")
 MIN_TOKENS=50
 MAX_TOKENS=500
-MIN_DELAY=2
-MAX_DELAY=8
+MIN_DELAY=1
+MAX_DELAY=3
 
 # Colors for output
 RED='\033[0;31m'
@@ -35,24 +37,26 @@ calculate_cost() {
 # Function to simulate usage
 simulate_usage() {
     local provider=${PROVIDERS[$((RANDOM % ${#PROVIDERS[@]}))]}
+    local model=${MODELS[$((RANDOM % ${#MODELS[@]}))]}
     local tokens=$(random_between $MIN_TOKENS $MAX_TOKENS)
     local cost=$(calculate_cost $tokens)
-    
+
     # Round cost to 6 decimal places
     cost=$(printf "%.6f" $cost)
-    
-    echo -e "${BLUE}[$(date '+%H:%M:%S')]${NC} Simulating usage for ${YELLOW}$provider${NC}: ${GREEN}$tokens tokens${NC}, ${RED}\$$cost${NC}"
-    
+
+    # Print the request info without newline
+    echo -n -e "${BLUE}[$(date '+%H:%M:%S')]${NC} Simulating usage for ${YELLOW}$provider${NC}/${YELLOW}$model${NC}: ${GREEN}$tokens tokens${NC}, ${RED}\$$cost${NC} ... "
+
     # Make the API call
     response=$(curl -s -X POST "$API_URL" \
         -H "Content-Type: application/json" \
-        -d "{\"providerId\": \"$provider\", \"tokens\": $tokens, \"cost\": $cost}")
-    
-    # Check if the request was successful
+        -d "{\"providerId\": \"$provider\", \"model\": \"$model\", \"tokens\": $tokens, \"cost\": $cost}")
+
+    # Check if the request was successful and print result on same line
     if echo "$response" | grep -q "message"; then
-        echo -e "  ${GREEN}✓${NC} Success"
+        echo -e "${GREEN}✓ Success${NC}"
     else
-        echo -e "  ${RED}✗${NC} Failed: $response"
+        echo -e "${RED}✗ Failed: $response${NC}"
     fi
 }
 
