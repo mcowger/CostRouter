@@ -5,23 +5,23 @@
       "type": "openai",
       "baseURL": "https://api.openai.com/v1",
       "apiKey": "sk-your_key_goes_here",
-      "limits": {
-        "requestsPerMinute": 100,
-        "requestsPerHour": 200,
-        "requestsPerDay": 1000,
-        "tokensPerMinute": 100000,
-        "tokensPerHour": 200000,
-        "tokensPerDay": 1000000,
-        "costPerMinute": 0.05,
-        "costPerHour": 0.50,
-        "costPerDay": 5.00
-      },
       "models": [
         {
           "name": "gpt-4",
           "pricing": {
             "inputCostPerMillionTokens": 10.00,
             "outputCostPerMillionTokens": 30.00
+          },
+          "limits": {
+            "requestsPerMinute": 50,
+            "requestsPerHour": 100,
+            "requestsPerDay": 500,
+            "tokensPerMinute": 50000,
+            "tokensPerHour": 100000,
+            "tokensPerDay": 500000,
+            "costPerMinute": 0.03,
+            "costPerHour": 0.30,
+            "costPerDay": 3.00
           }
         },
         {
@@ -29,6 +29,17 @@
           "pricing": {
             "inputCostPerMillionTokens": 0.50,
             "outputCostPerMillionTokens": 1.50
+          },
+          "limits": {
+            "requestsPerMinute": 100,
+            "requestsPerHour": 200,
+            "requestsPerDay": 1000,
+            "tokensPerMinute": 100000,
+            "tokensPerHour": 200000,
+            "tokensPerDay": 1000000,
+            "costPerMinute": 0.02,
+            "costPerHour": 0.20,
+            "costPerDay": 2.00
           }
         }
       ]
@@ -38,20 +49,20 @@
       "type": "openai",
       "baseURL": "https://openrouter.ai/api/v1",
       "apiKey": "sk-or-your_key_goes_here",
-      "limits": {
-        "requestsPerMinute": 2,
-        "requestsPerHour": 10,
-        "requestsPerDay": 100,
-        "tokensPerMinute": 1000,
-        "tokensPerHour": 5000,
-        "tokensPerDay": 10000,
-        "costPerDay": 1.00
-      },
       "models": [
         {
           "name": "moonshotai/kimi-k2:free",
           "pricing": {
             "costPerRequest": 0
+          },
+          "limits": {
+            "requestsPerMinute": 2,
+            "requestsPerHour": 10,
+            "requestsPerDay": 100,
+            "tokensPerMinute": 1000,
+            "tokensPerHour": 5000,
+            "tokensPerDay": 10000,
+            "costPerDay": 1.00
           }
         }
       ]

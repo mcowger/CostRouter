@@ -186,18 +186,19 @@ async function main() {
   // --- 9. Test Usage Simulation Route (for testing the dashboard) ---
   app.post("/usage/simulate", async (req, res) => {
     try {
-      const { providerId = "openroutera", tokens = 100, cost = 0.01 } = req.body;
+      const { providerId = "openroutera", model = "moonshotai/kimi-k2:free", tokens = 100, cost = 0.01 } = req.body;
 
       await usageManager.consume(
         providerId,
-        "test-model",
+        model,
         { promptTokens: Math.floor(tokens * 0.7), completionTokens: Math.floor(tokens * 0.3) },
         cost
       );
 
       res.json({
-        message: `Simulated usage for provider ${providerId}: ${tokens} tokens, $${cost}`,
+        message: `Simulated usage for provider ${providerId}/${model}: ${tokens} tokens, $${cost}`,
         providerId,
+        model,
         tokens,
         cost
       });

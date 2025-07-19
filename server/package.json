@@ -10,8 +10,6 @@
   },
   "scripts": {
     "dev": "tsx watch --inspect index.ts  --config ~/workspace/CostRouter/config.jsonc --usage-db-path ~/workspace/CostRouter/usage.db.json",
-    "build": "tsc",
-    "start": "node ./build/index.js --config ~/workspace/CostRouter/config.jsonc",
     "format": "prettier --write .",
     "clean": "rm -rf build"
   },
