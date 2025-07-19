@@ -38,21 +38,16 @@ export abstract class BaseExecutor {
   protected handleStreamingResponse(
     res: Response,
     provider: Provider,
-    modelName: string,
+    model: Model,
     result: StreamTextResult<any, any>,
   ): void {
     result.pipeDataStreamToResponse(res);
 
     result.usage
       .then((usage: LanguageModelUsage) => {
-        const model = provider.models.find(m => m.name === modelName);
-        if (!model) {
-            logger.error(`Could not find model specifics for '${modelName}' during cost calculation.`);
-            this.usageManager.consume(provider.id, modelName, usage);
-            return;
-        }
         const cost = this.calculateCost(model, usage);
-        this.usageManager.consume(provider.id, modelName, usage, cost);
+        // Use the real model name for usage tracking
+        this.usageManager.consume(provider.id, model.name, usage, cost);
       })
       .catch((error: any) => {
         logger.error(`Failed to consume usage for streaming request: ${getErrorMessage(error)}`);
@@ -62,18 +57,12 @@ export abstract class BaseExecutor {
   protected handleNonStreamingResponse(
     res: Response,
     provider: Provider,
-    modelName: string,
+    model: Model,
     result: GenerateTextResult<any, any>,
   ): void {
-    const model = provider.models.find(m => m.name === modelName);
-    if (!model) {
-        logger.error(`Could not find model specifics for '${modelName}' during cost calculation.`);
-        this.usageManager.consume(provider.id, modelName, result.usage);
-        res.json(result);
-        return;
-    }
     const cost = this.calculateCost(model, result.usage);
-    this.usageManager.consume(provider.id, modelName, result.usage, cost);
+    // Use the real model name for usage tracking
+    this.usageManager.consume(provider.id, model.name, result.usage, cost);
     res.json(result);
   }
 }
