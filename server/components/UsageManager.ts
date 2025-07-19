@@ -17,11 +17,17 @@ export interface LimitUsage {
   unit: 'requests' | 'tokens' | 'USD';
 }
 
-export interface ProviderUsage {
-  id: string;
+export interface ModelUsage {
+  name: string;
+  mappedName?: string;
   limits: {
     [key in LimitType]?: LimitUsage;
   };
+}
+
+export interface ProviderUsage {
+  id: string;
+  models: ModelUsage[];
 }
 
 export interface UsageDashboardData {
@@ -72,72 +78,76 @@ export class UsageManager {
     logger.info("Initializing rate limiters for all providers...");
 
     for (const provider of providers) {
-      if (provider.limits) {
-        this.createLimitersForProvider(provider);
-      }
+      // Create limiters for all models in this provider
+      this.createLimitersForProvider(provider);
     }
     logger.info("Rate limiters initialized.");
   }
 
   /**
-   * Creates individual rate limiters for a single provider's limits.
+   * Creates individual rate limiters for all models in a provider.
    */
   private createLimitersForProvider(provider: Provider): void {
-    if (!provider.limits) return;
-
     // Defines the types and durations of rate limits the UsageManager is designed to track.
-    // The actual limit values are read from the provider's configuration.
+    // The actual limit values are read from each model's configuration.
     const limitConfigs: [LimitType, number, 'requests' | 'tokens' | 'cost'][] = [
       ["requestsPerMinute", 60, "requests"], ["requestsPerHour", 3600, "requests"], ["requestsPerDay", 86400, "requests"],
       ["tokensPerMinute", 60, "tokens"], ["tokensPerHour", 3600, "tokens"], ["tokensPerDay", 86400, "tokens"],
       ["costPerMinute", 60, "cost"], ["costPerHour", 3600, "cost"], ["costPerDay", 86400, "cost"],
     ];
 
-    for (const [limitType, duration, type] of limitConfigs) {
-      let points = provider.limits[limitType];
+    // Create limiters for each model that has limits defined
+    for (const model of provider.models) {
+      if (!model.limits) continue;
 
-      if (points) {
-        // Convert cost limits from dollars to integer points
-        if (type === 'cost') {
-          points = Math.floor(points * COST_MULTIPLIER);
+      for (const [limitType, duration, type] of limitConfigs) {
+        let points = model.limits[limitType];
+
+        if (points) {
+          // Convert cost limits from dollars to integer points
+          if (type === 'cost') {
+            points = Math.floor(points * COST_MULTIPLIER);
+          }
+
+          const key = `${provider.id}/${model.name}/${limitType}`;
+          const opts: IRateLimiterOptions = { points, duration };
+          this.limiters.set(key, new RateLimiterMemory(opts));
+          logger.debug(
+            `Limiter: '${key}': ${points} ${type}/${formatDuration(duration)} (${duration}s).`,
+          );
         }
-
-        const key = `${provider.id}/${limitType}`;
-        const opts: IRateLimiterOptions = { points, duration };
-        this.limiters.set(key, new RateLimiterMemory(opts));
-        logger.debug(
-          `Limiter: '${key}': ${points} ${type}/${formatDuration(duration)} (${duration}s).`,
-        );
       }
     }
   }
 
   /**
-   * Checks if a provider has available capacity.
+   * Checks if a specific model has available capacity.
    */
-  public async isUnderLimit(providerId: string): Promise<boolean> {
-    const providerLimitKeys = Array.from(this.limiters.keys()).filter(key => key.startsWith(providerId));
-    if (providerLimitKeys.length === 0) {
-      return true;
+  public async isUnderLimit(providerId: string, modelName: string): Promise<boolean> {
+    const modelLimitKeys = Array.from(this.limiters.keys()).filter(key =>
+      key.startsWith(`${providerId}/${modelName}/`)
+    );
+    if (modelLimitKeys.length === 0) {
+      return true; // No limits configured for this model
     }
 
     try {
-      for (const key of providerLimitKeys) {
+      for (const key of modelLimitKeys) {
         const limiter = this.limiters.get(key);
         // Cost-based limits are checked on consumption, not pre-flight,
         // as the cost is unknown until the response is received.
         if (key.includes('cost')) {
           continue;
         }
-        const res = await limiter?.get(providerId);
+        const res = await limiter?.get(`${providerId}/${modelName}`);
         if (res && res.consumedPoints >= (limiter?.points ?? Infinity)) {
-          logger.warn(`Provider '${providerId}' has exceeded limit '${key}'.`);
+          logger.warn(`Model '${modelName}' on provider '${providerId}' has exceeded limit '${key}'.`);
           return false;
         }
       }
       return true;
     } catch (error) {
-      logger.error(`Error checking limits for provider '${providerId}': ${getErrorMessage(error)}`);
+      logger.error(`Error checking limits for model '${modelName}' on provider '${providerId}': ${getErrorMessage(error)}`);
       return false; // Fail closed
     }
   }
@@ -172,10 +182,10 @@ export class UsageManager {
     const consumptionJobs: Promise<any>[] = [];
 
     const checkAndConsume = (limitType: LimitType, points: number) => {
-      const key = `${providerId}/${limitType}`;
+      const key = `${providerId}/${model}/${limitType}`;
       const limiter = this.limiters.get(key);
       if (limiter && points > 0) {
-        consumptionJobs.push(limiter.consume(providerId, points));
+        consumptionJobs.push(limiter.consume(`${providerId}/${model}`, points));
       }
     };
 
@@ -204,7 +214,7 @@ export class UsageManager {
   }
 
   /**
-   * Gets current usage data for all providers for the dashboard.
+   * Gets current usage data for all providers and models for the dashboard.
    */
   public async getCurrentUsageData(): Promise<UsageDashboardData> {
     const providers = ConfigManager.getProviders();
@@ -218,21 +228,28 @@ export class UsageManager {
     ];
 
     for (const provider of providers) {
-      const providerUsage: ProviderUsage = {
-        id: provider.id,
-        limits: {}
-      };
+      const modelUsages: ModelUsage[] = [];
 
-      if (provider.limits) {
+      // Process each model in the provider
+      for (const model of provider.models) {
+        if (!model.limits) continue; // Skip models without limits
+
+        const modelUsage: ModelUsage = {
+          name: model.name,
+          mappedName: model.mappedName,
+          limits: {}
+        };
+
+        // Check each limit type for this model
         for (const [limitType, unit] of limitConfigs) {
-          const limitValue = provider.limits[limitType];
+          const limitValue = model.limits[limitType];
           if (limitValue) {
-            const key = `${provider.id}/${limitType}`;
+            const key = `${provider.id}/${model.name}/${limitType}`;
             const limiter = this.limiters.get(key);
 
             if (limiter) {
               try {
-                const res = await limiter.get(provider.id);
+                const res = await limiter.get(`${provider.id}/${model.name}`);
                 let consumed = 0;
                 let limit = limitValue;
                 let msBeforeNext = 0;
@@ -250,7 +267,7 @@ export class UsageManager {
 
                 const percentage = limit > 0 ? Math.round((consumed / limit) * 100) : 0;
 
-                providerUsage.limits[limitType] = {
+                modelUsage.limits[limitType] = {
                   consumed,
                   limit,
                   percentage,
@@ -264,7 +281,17 @@ export class UsageManager {
             }
           }
         }
+
+        // Only add models that have at least one limit configured
+        if (Object.keys(modelUsage.limits).length > 0) {
+          modelUsages.push(modelUsage);
+        }
       }
+
+      const providerUsage: ProviderUsage = {
+        id: provider.id,
+        models: modelUsages
+      };
 
       providerUsages.push(providerUsage);
     }

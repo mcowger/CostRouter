@@ -1,4 +1,5 @@
 import { Provider } from "../../schemas/provider.schema.js";
+import { Model } from "../../schemas/model.schema.js";
 import { logger } from "../Logger.js";
 import { Request, Response } from "express";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
@@ -19,7 +20,8 @@ export class OpenAIExecutor extends BaseExecutor {
 
   public async execute(req: Request, res: Response): Promise<void> {
     const chosenProvider = res.locals.chosenProvider as Provider;
-    logger.debug({ provider: chosenProvider }, "Executing request with OpenAI provider:");
+    const chosenModel = res.locals.chosenModel as Model;
+    logger.debug({ provider: chosenProvider, model: chosenModel }, "Executing request with OpenAI provider:");
 
     if (
       chosenProvider.type !== "openai" ||
@@ -39,16 +41,17 @@ export class OpenAIExecutor extends BaseExecutor {
       apiKey: chosenProvider.apiKey,
     });
 
-    const { messages, stream = false, model: modelName } = req.body;
-    const model: LanguageModelV1 = llm(modelName as string);
+    const { messages, stream = false } = req.body;
+    // Use the real model name for the API call
+    const model: LanguageModelV1 = llm(chosenModel.name);
 
     try {
       if (stream) {
         const result = await streamText({ model, messages });
-        this.handleStreamingResponse(res, chosenProvider, modelName, result);
+        this.handleStreamingResponse(res, chosenProvider, chosenModel, result);
       } else {
         const result = await generateText({ model, messages });
-        this.handleNonStreamingResponse(res, chosenProvider, modelName, result);
+        this.handleNonStreamingResponse(res, chosenProvider, chosenModel, result);
       }
     } catch (error) {
       logger.error(`AI request failed for provider ${chosenProvider.id}: ${getErrorMessage(error)}`);

@@ -11,51 +11,66 @@
     </div>
     
     <div v-else class="dashboard-grid">
-      <div 
-        v-for="provider in usageData?.providers" 
-        :key="provider.id" 
+      <div
+        v-for="provider in usageData?.providers"
+        :key="provider.id"
         class="provider-card"
       >
         <h3 class="provider-title">{{ provider.id }}</h3>
-        
-        <div class="limits-container">
-          <!-- Group limits by type (requests, tokens, cost) -->
-          <div v-for="group in getLimitGroups(provider.limits)" :key="group.type" class="limit-group">
-            <h4 class="group-title">{{ group.title }}</h4>
-            <div class="group-items">
-              <div
-                v-for="item in group.items"
-                :key="item.period"
-                class="compact-limit-item"
-              >
-                <div class="compact-header">
-                  <span class="period-label">{{ item.period }}</span>
-                  <span class="compact-values">
-                    {{ formatValue(item.usage.consumed, item.usage.unit) }} / {{ formatValue(item.usage.limit, item.usage.unit) }}
-                  </span>
-                  <span class="compact-percentage" :class="getProgressBarClass(item.usage.percentage)">
-                    {{ item.usage.percentage }}%
-                  </span>
-                </div>
 
-                <div class="compact-progress-container">
+        <!-- Show message if no models have limits configured -->
+        <div v-if="provider.models.length === 0" class="no-limits">
+          No rate limits configured for any models in this provider
+        </div>
+
+        <!-- Display each model's limits -->
+        <div v-else class="models-container">
+          <div
+            v-for="model in provider.models"
+            :key="model.name"
+            class="model-section"
+          >
+            <h4 class="model-title">
+              <span v-if="model.mappedName" class="mapped-name">{{ model.mappedName }}</span>
+              <span v-if="model.mappedName" class="real-name">({{ model.name }})</span>
+              <span v-else>{{ model.name }}</span>
+            </h4>
+
+            <div class="limits-container">
+              <!-- Group limits by type (requests, tokens, cost) -->
+              <div v-for="group in getLimitGroups(model.limits)" :key="group.type" class="limit-group">
+                <h5 class="group-title">{{ group.title }}</h5>
+                <div class="group-items">
                   <div
-                    class="compact-progress-bar"
-                    :class="getProgressBarClass(item.usage.percentage)"
-                    :style="{ width: Math.min(item.usage.percentage, 100) + '%' }"
-                  ></div>
-                </div>
+                    v-for="item in group.items"
+                    :key="item.period"
+                    class="compact-limit-item"
+                  >
+                    <div class="compact-header">
+                      <span class="period-label">{{ item.period }}</span>
+                      <span class="compact-values">
+                        {{ formatValue(item.usage.consumed, item.usage.unit) }} / {{ formatValue(item.usage.limit, item.usage.unit) }}
+                      </span>
+                      <span class="compact-percentage" :class="getProgressBarClass(item.usage.percentage)">
+                        {{ item.usage.percentage }}%
+                      </span>
+                    </div>
 
-                <div v-if="item.usage.msBeforeNext > 0" class="compact-reset-time">
-                  Resets in {{ formatTimeRemaining(item.usage.msBeforeNext) }}
+                    <div class="compact-progress-container">
+                      <div
+                        class="compact-progress-bar"
+                        :class="getProgressBarClass(item.usage.percentage)"
+                        :style="{ width: Math.min(item.usage.percentage, 100) + '%' }"
+                      ></div>
+                    </div>
+
+                    <div v-if="item.usage.msBeforeNext > 0" class="compact-reset-time">
+                      Resets in {{ formatTimeRemaining(item.usage.msBeforeNext) }}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-
-          <!-- Show message if no limits are configured -->
-          <div v-if="Object.keys(provider.limits).length === 0" class="no-limits">
-            No rate limits configured for this provider
           </div>
         </div>
       </div>
@@ -83,11 +98,17 @@ interface LimitUsage {
   unit: 'requests' | 'tokens' | 'USD';
 }
 
-interface ProviderUsage {
-  id: string;
+interface ModelUsage {
+  name: string;
+  mappedName?: string;
   limits: {
     [key: string]: LimitUsage;
   };
+}
+
+interface ProviderUsage {
+  id: string;
+  models: ModelUsage[];
 }
 
 interface UsageDashboardData {
@@ -253,6 +274,40 @@ onUnmounted(() => {
   color: var(--color-heading);
   font-size: 18px;
   font-weight: 600;
+}
+
+.models-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.model-section {
+  background: var(--color-background-soft);
+  border-radius: 6px;
+  padding: 15px;
+  border: 1px solid var(--color-border);
+}
+
+.model-title {
+  margin: 0 0 12px 0;
+  color: var(--color-heading);
+  font-size: 16px;
+  font-weight: 600;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.mapped-name {
+  font-weight: 600;
+  color: var(--color-heading);
+}
+
+.real-name {
+  font-weight: 400;
+  color: var(--color-text-2);
+  font-size: 14px;
+  margin-left: 8px;
 }
 
 .limits-container {

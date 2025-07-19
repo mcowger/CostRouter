@@ -1,4 +1,5 @@
 import { Provider } from "../../schemas/provider.schema.js";
+import { Model } from "../../schemas/model.schema.js";
 import { ConfigManager } from "./ConfigManager.js";
 import { logger } from "./Logger.js";
 import { Request, Response, NextFunction } from "express";
@@ -38,13 +39,22 @@ export class Router {
     }
 
 
-  private getProvidersForModel(modelname: string): Provider[] | undefined {
+  private getProvidersForModel(modelname: string): { provider: Provider; model: Model }[] | undefined {
     logger.debug(`Searching for providers for model: ${modelname}`);
     const providers: Provider[] = ConfigManager.getProviders();
-    const filteredProviders = providers.filter((provider) =>
-      provider.models.some(model => model.name === modelname),
-    );
-    return filteredProviders.length > 0 ? filteredProviders : undefined;
+    const matches: { provider: Provider; model: Model }[] = [];
+
+    for (const provider of providers) {
+      for (const model of provider.models) {
+        // Check if the requested model name matches either the mappedName or the real name
+        const modelIdentifier = model.mappedName || model.name;
+        if (modelIdentifier === modelname) {
+          matches.push({ provider, model });
+        }
+      }
+    }
+
+    return matches.length > 0 ? matches : undefined;
   }
 
   public async chooseProvider(req: Request, res: Response, next: NextFunction) {
@@ -59,17 +69,20 @@ export class Router {
         .json({ error: `No configured provider found for model: ${modelname}` });
     }
     logger.debug(
-      `Identified candidate providers: ${candidates.map((p) => p.id).join(", ")}`,
+      `Identified candidate providers: ${candidates.map((c) => c.provider.id).join(", ")}`,
     );
 
-    for (const provider of candidates) {
-      if (await this.usageManager.isUnderLimit(provider.id)) {
-        logger.debug(`Selected provider '${provider.id}' as it has available capacity.`);
+    for (const candidate of candidates) {
+      const { provider, model } = candidate;
+      // Use the real model name for rate limiting checks
+      if (await this.usageManager.isUnderLimit(provider.id, model.name)) {
+        logger.debug(`Selected provider '${provider.id}' for model '${modelname}' (real name: '${model.name}') as it has available capacity.`);
         res.locals.chosenProvider = provider;
+        res.locals.chosenModel = model;
         return next();
       }
       logger.debug(
-        `Skipping provider '${provider.id}' due to rate limits.`,
+        `Skipping provider '${provider.id}' for model '${modelname}' (real name: '${model.name}') due to rate limits.`,
       );
     }
 
