@@ -1,5 +1,5 @@
-import { Provider } from "../../schemas/provider.schema.js";
-import { Model } from "../../schemas/model.schema.js";
+import { Provider } from "../../../schemas/provider.schema";
+import { Model } from "../../../schemas/model.schema";
 import { logger } from "../Logger.js";
 import { Request, Response } from "express";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";

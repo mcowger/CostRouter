@@ -1,4 +1,4 @@
-import { CopilotTokenManager } from '../src/components/CopilotTokenManager.js';
+import { CopilotTokenManager } from '../server/components/CopilotTokenManager';
 
 const COPILOT_API_HOST = "api.githubcopilot.com";
 

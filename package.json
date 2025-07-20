@@ -8,11 +8,11 @@
   "license": "ISC",
   "scripts": {
     "dev:server": "tsx watch --inspect server/index.ts  --config ~/workspace/CostRouter/config.jsonc --usage-db-path ~/workspace/CostRouter/usage.db.json",
-    "dev:ui": "vite",
+    "dev:ui": "cd ui && vite",
     "clean": "rm -rf ui/dist && rm -rf server/build && rm -rf server/node_modules && rm -rf ui/node_modules && rm -rf node_modules",
     "setup": "cp config.example.jsonc config.jsonc && echo 'Configuration file created. Please edit config.jsonc with your API keys.'",
-    "build-only": "vite build",
-    "type-check": "vue-tsc --build ui/tsconfig.json"
+    "build-only": "cd ui && vite build",
+    "type-check": "vue-tsc --build"
   },
   "dependencies": {
     "@ai-sdk/openai-compatible": "^0.2.16",
