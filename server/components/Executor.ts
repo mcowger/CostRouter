@@ -2,23 +2,18 @@ import { Provider } from "../../schemas/provider.schema.js";
 import { UsageManager } from "./UsageManager.js";
 import { logger } from "./Logger.js";
 import { Request, Response } from "express";
-import { BaseExecutor, CopilotExecutor, OpenAIExecutor } from "./executors/index.js";
+import { UnifiedExecutor } from "./UnifiedExecutor.js";
 
+/**
+ * Main executor class that handles AI requests for all provider types.
+ * Now uses the UnifiedExecutor instead of provider-specific executors.
+ */
 export class Executor {
   private static instance: Executor;
-  private usageManager: UsageManager;
-  private executors: Map<string, BaseExecutor>;
+  private unifiedExecutor: UnifiedExecutor;
 
   private constructor(usageManager: UsageManager) {
-    this.usageManager = usageManager;
-    this.executors = new Map();
-    this.registerExecutors();
-  }
-
-  private registerExecutors(): void {
-    this.executors.set("openai", new OpenAIExecutor(this.usageManager));
-    this.executors.set("copilot", new CopilotExecutor(this.usageManager));
-    // Register other executors here
+    this.unifiedExecutor = new UnifiedExecutor(usageManager);
   }
 
   public static getInstance(usageManager: UsageManager): Executor {
@@ -28,16 +23,28 @@ export class Executor {
     return Executor.instance;
   }
 
+  /**
+   * Executes an AI request using the unified executor.
+   * Supports all AI SDK v5 providers.
+   */
   public async execute(req: Request, res: Response): Promise<void> {
     const chosenProvider = res.locals.chosenProvider as Provider;
-    const executor = this.executors.get(chosenProvider.type);
 
-    if (!executor) {
-      logger.error(`No executor found for provider type: ${chosenProvider.type}`);
-      res.status(500).json({ error: "Executor not found" });
-      return;
+    logger.debug(`Executing request for provider: ${chosenProvider.id} (${chosenProvider.type})`);
+
+    try {
+      await this.unifiedExecutor.execute(req, res);
+    } catch (error) {
+      logger.error(`Execution failed for provider ${chosenProvider.id}: ${error}`);
+      res.status(500).json({ error: "Request execution failed" });
     }
+  }
 
-    await executor.execute(req, res);
+  /**
+   * Clears the provider instance cache in the unified executor.
+   * Useful for testing or when configurations change.
+   */
+  public clearCache(): void {
+    this.unifiedExecutor.clearCache();
   }
 }
