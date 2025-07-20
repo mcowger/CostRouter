@@ -3,8 +3,6 @@ import { promises as fs } from 'fs';
 import { AppConfig, AppConfigSchema } from '../../schemas/appConfig.schema.js';
 import { Provider } from '../../schemas/provider.schema';
 import { parse } from 'jsonc-parser';
-import yargs from "yargs/yargs";
-import { hideBin } from "yargs/helpers";
 import { logger, PinoLogger } from "./Logger.js";
 import { getErrorMessage } from './Utils.js';
 

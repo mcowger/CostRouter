@@ -35,7 +35,7 @@ export const ProviderTypeSchema = z.enum([
 
 /**
  * Zod schema for a single LLM provider configuration.
- * Supports all AI SDK v5 providers with provider-specific validation.
+ * Supports all AI SDK v4 providers with provider-specific validation.
  */
 export const ProviderSchema = z
   .object({
@@ -75,7 +75,7 @@ export const ProviderSchema = z
     const apiKeyRequired = [
       "openai", "anthropic", "google", "google-vertex", "azure",
       "groq", "mistral", "deepseek", "xai", "perplexity", "togetherai",
-      "openrouter", "claude-code", "gemini-cli", "qwen"
+      "openrouter", "qwen"
     ];
     return !apiKeyRequired.includes(data.type) || data.apiKey;
   }, {

@@ -5,7 +5,7 @@ async function main() {
     "http://localhost:3000/v1/chat/completions",
     {
       //model: "gpt-4o",
-      model: "gemini-2.5-flash",
+      model: "gemini-2.5-flash-lite",
       // model: "nonexistent-model",
       messages: [{ role: "user", content: "are you gpt-4o or gpt-4.1?" }],
       stream: false,

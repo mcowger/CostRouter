@@ -30,6 +30,7 @@ import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 // which nothing else does.  For now, treat it as openai-compatible
 import { createOllama } from "ollama-ai-provider";
 import { createQwen } from "qwen-ai-provider";
+import { createGeminiProvider } from "ai-sdk-provider-gemini-cli"
 
 /**
  * Unified executor that handles all AI SDK v5 providers.
@@ -92,6 +93,9 @@ export class UnifiedExecutor {
     // OpenAI-compatible providers
     ["ollama", (config) => createOllama({
       baseURL: config.baseURL || "http://localhost:11434",
+    })],
+    ["gemini-cli", (config) => createGeminiProvider({ 
+      authType: "oauth-personal"
     })],
 
     // OpenRouter - use compatible for now because their provider only supports v5.

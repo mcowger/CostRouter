@@ -4,6 +4,7 @@ import { ConfigManager } from "./ConfigManager.js";
 import { logger } from "./Logger.js";
 import { Request, Response, NextFunction } from "express";
 import { UsageManager } from "./UsageManager.js";
+import { PriceData } from "./PriceData.js";
 
 export class Router {
   private static instance: Router;
@@ -57,6 +58,55 @@ export class Router {
     return matches.length > 0 ? matches : undefined;
   }
 
+  /**
+   * Determines if a provider/model combination has zero cost.
+   * A model is considered zero-cost only if pricing data exists and all pricing fields are explicitly 0.
+   * Unknown/undefined pricing is not considered zero cost.
+   */
+  private isZeroCost(provider: Provider, model: Model): boolean {
+    try {
+      const priceData = PriceData.getInstance();
+      const pricing = priceData.getPriceWithOverride(provider.type, model);
+
+      if (!pricing) {
+        // No pricing data available - not considered zero cost
+        return false;
+      }
+
+      // For a model to be considered zero cost, we need at least one pricing field
+      // to be explicitly defined (not undefined) and all defined fields must be 0
+      const hasInputCost = pricing.inputCostPerMillionTokens !== undefined;
+      const hasOutputCost = pricing.outputCostPerMillionTokens !== undefined;
+      const hasRequestCost = pricing.costPerRequest !== undefined;
+
+      // Must have at least one pricing field defined
+      if (!hasInputCost && !hasOutputCost && !hasRequestCost) {
+        return false;
+      }
+
+      // All defined pricing fields must be exactly 0
+      const inputIsZero = !hasInputCost || pricing.inputCostPerMillionTokens === 0;
+      const outputIsZero = !hasOutputCost || pricing.outputCostPerMillionTokens === 0;
+      const requestIsZero = !hasRequestCost || pricing.costPerRequest === 0;
+
+      return inputIsZero && outputIsZero && requestIsZero;
+    } catch (error) {
+      logger.debug(`Error checking zero cost for ${provider.id}/${model.name}: ${error}`);
+      return false;
+    }
+  }
+
+  /**
+   * Randomly selects one item from an array.
+   */
+  private randomSelect<T>(items: T[]): T {
+    if (items.length === 0) {
+      throw new Error("Cannot select from empty array");
+    }
+    const randomIndex = Math.floor(Math.random() * items.length);
+    return items[randomIndex];
+  }
+
   public async chooseProvider(req: Request, res: Response, next: NextFunction) {
     const modelname = req.body.model;
     logger.debug(`Finding a provider for model: ${modelname}`);
@@ -72,25 +122,49 @@ export class Router {
       `Identified candidate providers: ${candidates.map((c) => c.provider.id).join(", ")}`,
     );
 
+    // Filter candidates to only those under rate limits
+    const availableCandidates = [];
     for (const candidate of candidates) {
       const { provider, model } = candidate;
       // Use the real model name for rate limiting checks
       if (await this.usageManager.isUnderLimit(provider.id, model.name)) {
-        logger.debug(`Selected provider '${provider.id}' for model '${modelname}' (real name: '${model.name}') as it has available capacity.`);
-        res.locals.chosenProvider = provider;
-        res.locals.chosenModel = model;
-        return next();
+        availableCandidates.push(candidate);
+      } else {
+        logger.debug(
+          `Skipping provider '${provider.id}' for model '${modelname}' (real name: '${model.name}') due to rate limits.`,
+        );
       }
-      logger.debug(
-        `Skipping provider '${provider.id}' for model '${modelname}' (real name: '${model.name}') due to rate limits.`,
-      );
     }
 
-    logger.error(
-      `All providers for model '${modelname}' are at their rate limits.`
+    if (availableCandidates.length === 0) {
+      logger.error(
+        `All providers for model '${modelname}' are at their rate limits.`
+      );
+      return res.status(503).json({
+        error: `All providers for model '${modelname}' are currently at their rate limit. Please try again later.`,
+      });
+    }
+
+    // Step 1: Check for zero-cost providers
+    const zeroCostCandidates = availableCandidates.filter(candidate =>
+      this.isZeroCost(candidate.provider, candidate.model)
     );
-    return res.status(503).json({
-      error: `All providers for model '${modelname}' are currently at their rate limit. Please try again later.`,
-    });
+
+    let selectedCandidate;
+    if (zeroCostCandidates.length > 0) {
+      // If we have zero-cost providers, select randomly from them
+      logger.debug(`Found ${zeroCostCandidates.length} zero-cost providers, selecting randomly`);
+      selectedCandidate = this.randomSelect(zeroCostCandidates);
+    } else {
+      // No zero-cost providers, select randomly from all available candidates
+      logger.debug(`No zero-cost providers found, selecting randomly from ${availableCandidates.length} available providers`);
+      selectedCandidate = this.randomSelect(availableCandidates);
+    }
+
+    const { provider, model } = selectedCandidate;
+    logger.debug(`Selected provider '${provider.id}' for model '${modelname}' (real name: '${model.name}').`);
+    res.locals.chosenProvider = provider;
+    res.locals.chosenModel = model;
+    return next();
   }
 }

@@ -14,7 +14,7 @@
       "runtimeExecutable": "pnpm",
       "runtimeArgs": [
         "run",
-        "dev:server:debug",
+        "dev:server",
       ]
     },
     {
