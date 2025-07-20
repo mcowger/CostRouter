@@ -18,8 +18,8 @@
       >
         <h3 class="provider-title">{{ provider.id }}</h3>
 
-        <!-- Show message if no models have limits configured -->
-        <div v-if="provider.models.length === 0" class="no-limits">
+        <!-- Show message if no models have active limits configured -->
+        <div v-if="!hasAnyActiveLimits(provider)" class="no-limits">
           No rate limits configured for any models in this provider
         </div>
 
@@ -36,7 +36,12 @@
               <span v-else>{{ model.name }}</span>
             </h4>
 
-            <div class="limits-container">
+            <!-- Show message if this specific model has no active limits -->
+            <div v-if="Object.keys(model.limits).length === 0" class="no-model-limits">
+              No rate limits configured for this model
+            </div>
+
+            <div v-else class="limits-container">
               <!-- Group limits by type (requests, tokens, cost) -->
               <div v-for="group in getLimitGroups(model.limits)" :key="group.type" class="limit-group">
                 <h5 class="group-title">{{ group.title }}</h5>
@@ -183,6 +188,10 @@ const getLimitGroups = (limits: { [key: string]: LimitUsage }) => {
 
   // Return only groups that have items
   return groups.filter(group => group.items.length > 0);
+};
+
+const hasAnyActiveLimits = (provider: ProviderUsage): boolean => {
+  return provider.models.some(model => Object.keys(model.limits).length > 0);
 };
 
 const formatValue = (value: number, unit: string): string => {
@@ -431,6 +440,17 @@ onUnmounted(() => {
   color: var(--color-text);
   font-style: italic;
   padding: 20px;
+}
+
+.no-model-limits {
+  text-align: center;
+  color: #888;
+  font-style: italic;
+  padding: 15px;
+  background-color: #f5f5f5;
+  border-radius: 4px;
+  margin: 10px 0;
+  font-size: 14px;
 }
 
 .last-updated {

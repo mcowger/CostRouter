@@ -232,60 +232,60 @@ export class UsageManager {
 
       // Process each model in the provider
       for (const model of provider.models) {
-        if (!model.limits) continue; // Skip models without limits
-
         const modelUsage: ModelUsage = {
           name: model.name,
           mappedName: model.mappedName,
           limits: {}
         };
 
-        // Check each limit type for this model
-        for (const [limitType, unit] of limitConfigs) {
-          const limitValue = model.limits[limitType];
-          if (limitValue) {
-            const key = `${provider.id}/${model.name}/${limitType}`;
-            const limiter = this.limiters.get(key);
+        // Check if model has limits object (even if all values are undefined)
+        if (model.limits) {
+          // Check each limit type for this model
+          for (const [limitType, unit] of limitConfigs) {
+            const limitValue = model.limits[limitType];
+            if (limitValue !== undefined && limitValue > 0) {
+              const key = `${provider.id}/${model.name}/${limitType}`;
+              const limiter = this.limiters.get(key);
 
-            if (limiter) {
-              try {
-                const res = await limiter.get(`${provider.id}/${model.name}`);
-                let consumed = 0;
-                let limit = limitValue;
-                let msBeforeNext = 0;
+              if (limiter) {
+                try {
+                  const res = await limiter.get(`${provider.id}/${model.name}`);
+                  let consumed = 0;
+                  let limit = limitValue;
+                  let msBeforeNext = 0;
 
-                if (res) {
-                  consumed = res.consumedPoints;
-                  msBeforeNext = res.msBeforeNext;
+                  if (res) {
+                    consumed = res.consumedPoints;
+                    msBeforeNext = res.msBeforeNext;
+                  }
+
+                  // Convert cost points back to USD for display
+                  if (unit === 'USD') {
+                    consumed = consumed / COST_MULTIPLIER;
+                    // limit is already in USD from config
+                  }
+
+                  const percentage = limit > 0 ? Math.round((consumed / limit) * 100) : 0;
+
+                  modelUsage.limits[limitType] = {
+                    consumed,
+                    limit,
+                    percentage,
+                    msBeforeNext,
+                    unit
+                  };
+                } catch (error) {
+                  logger.warn(`Error getting usage data for ${key}: ${getErrorMessage(error)}`);
+                  // Continue with other limiters even if one fails
                 }
-
-                // Convert cost points back to USD for display
-                if (unit === 'USD') {
-                  consumed = consumed / COST_MULTIPLIER;
-                  // limit is already in USD from config
-                }
-
-                const percentage = limit > 0 ? Math.round((consumed / limit) * 100) : 0;
-
-                modelUsage.limits[limitType] = {
-                  consumed,
-                  limit,
-                  percentage,
-                  msBeforeNext,
-                  unit
-                };
-              } catch (error) {
-                logger.warn(`Error getting usage data for ${key}: ${getErrorMessage(error)}`);
-                // Continue with other limiters even if one fails
               }
             }
           }
         }
 
-        // Only add models that have at least one limit configured
-        if (Object.keys(modelUsage.limits).length > 0) {
-          modelUsages.push(modelUsage);
-        }
+        // Add all models to show in dashboard, even if they have no active limits
+        // This allows the UI to show "No rate limits configured" message properly
+        modelUsages.push(modelUsage);
       }
 
       const providerUsage: ProviderUsage = {

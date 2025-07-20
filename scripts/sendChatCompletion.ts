@@ -59,5 +59,5 @@ async function streamingExample() {
   }
 }
 
-//generateTextExample();
-streamingExample();
+generateTextExample();
+//ThistreamingExample();
