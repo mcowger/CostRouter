@@ -5,23 +5,23 @@ import { z } from 'zod';
  * All cost fields are optional.
  */
 export const PricingSchema = z.object({
-    /** 
-     * The cost in USD per 1 million input tokens.
-     * Example: A value of 0.5 means $0.50 per 1M input tokens.
-     */
-    inputCostPerMillionTokens: z.number().positive().optional(),
+  /** 
+   * The cost in USD per 1 million input tokens.
+   * Example: A value of 0.5 means $0.50 per 1M input tokens.
+   */
+  inputCostPerMillionTokens: z.number().nonnegative().optional(),
 
-    /** 
-     * The cost in USD per 1 million output tokens.
-     * Example: A value of 1.5 means $1.50 per 1M output tokens.
-     */
-    outputCostPerMillionTokens: z.number().positive().optional(),
+  /** 
+   * The cost in USD per 1 million output tokens.
+   * Example: A value of 1.5 means $1.50 per 1M output tokens.
+   */
+  outputCostPerMillionTokens: z.number().nonnegative().optional(),
 
-    /** 
-     * A flat cost in USD per request/call.
-     * Example: A value of 0.001 means $0.001 per request.
-     */
-    costPerRequest: z.number().positive().optional(),
+  /** 
+   * A flat cost in USD per request/call.
+   * Example: A value of 0.001 means $0.001 per request.
+   */
+  costPerRequest: z.number().nonnegative().optional(),
 });
 
 /**
