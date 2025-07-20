@@ -54,9 +54,6 @@ importers:
       '@babel/runtime':
         specifier: ^7.27.6
         version: 7.27.6
-      '@openrouter/ai-sdk-provider':
-        specifier: 1.0.0-beta.3
-        version: 1.0.0-beta.3(ai@4.3.19(react@19.1.0)(zod@3.25.76))(zod@3.25.76)
       ai:
         specifier: ^4.3.19
         version: 4.3.19(react@19.1.0)(zod@3.25.76)
@@ -81,6 +78,9 @@ importers:
       ollama-ai-provider:
         specifier: ^1.2.0
         version: 1.2.0(zod@3.25.76)
+      openai:
+        specifier: ^5.10.1
+        version: 5.10.1(ws@8.18.3)(zod@3.25.76)
       pinia:
         specifier: ^3.0.3
         version: 3.0.3(typescript@5.8.3)(vue@3.5.17(typescript@5.8.3))
@@ -933,13 +933,6 @@ packages:
   '@noble/hashes@1.8.0':
     resolution: {integrity: sha512-jCs9ldd7NwzpgXDIf6P3+NrHh9/sD6CQdxHyjQI+h/6rDNo88ypBxxz45UDuZHz9r3tNz7N/VInSVoVdtXEI4A==}
     engines: {node: ^14.21.3 || >=16}
-
-  '@openrouter/ai-sdk-provider@1.0.0-beta.3':
-    resolution: {integrity: sha512-W4l1NodO/VfwLxuY2qDLH0LwigNe/q5wrixImat1fvTiwEDJniUrySo0iARIXVqKrr297H/ScXNFu3NViinySQ==}
-    engines: {node: '>=18'}
-    peerDependencies:
-      ai: ^5.0.0-beta.12
-      zod: ^4.0.5
 
   '@opentelemetry/api-logs@0.52.1':
     resolution: {integrity: sha512-qnSqB2DQ9TPP96dl8cDubDvrUyWc0/sK81xHTK8eSUspzDM3bsewX903qclQFvVhgStjRWdC5bLb3kQqMkfV5A==}
@@ -2963,6 +2956,18 @@ packages:
     resolution: {integrity: sha512-YgBpdJHPyQ2UE5x+hlSXcnejzAvD0b22U2OuAP+8OnlJT+PjWPxtgmGqKKc+RgTM63U9gN0YzrYc71R2WT/hTA==}
     engines: {node: '>=18'}
 
+  openai@5.10.1:
+    resolution: {integrity: sha512-fq6xVfv1/gpLbsj8fArEt3b6B9jBxdhAK+VJ+bDvbUvNd+KTLlA3bnDeYZaBsGH9LUhJ1M1yXfp9sEyBLMx6eA==}
+    hasBin: true
+    peerDependencies:
+      ws: ^8.18.0
+      zod: ^3.23.8
+    peerDependenciesMeta:
+      ws:
+        optional: true
+      zod:
+        optional: true
+
   p-limit@2.3.0:
     resolution: {integrity: sha512-//88mFWSJx8lxCzwdAABTJL2MyWB12+eIY7MDL2SqLmAkeKU9qxRvWuSyTjm3FUmpBEMuFfckAIqEaVGUDxb6w==}
     engines: {node: '>=6'}
@@ -4622,11 +4627,6 @@ snapshots:
     optional: true
 
   '@noble/hashes@1.8.0': {}
-
-  '@openrouter/ai-sdk-provider@1.0.0-beta.3(ai@4.3.19(react@19.1.0)(zod@3.25.76))(zod@3.25.76)':
-    dependencies:
-      ai: 4.3.19(react@19.1.0)(zod@3.25.76)
-      zod: 3.25.76
 
   '@opentelemetry/api-logs@0.52.1':
     dependencies:
@@ -6928,6 +6928,11 @@ snapshots:
       define-lazy-prop: 3.0.0
       is-inside-container: 1.0.0
       wsl-utils: 0.1.0
+
+  openai@5.10.1(ws@8.18.3)(zod@3.25.76):
+    optionalDependencies:
+      ws: 8.18.3
+      zod: 3.25.76
 
   p-limit@2.3.0:
     dependencies:

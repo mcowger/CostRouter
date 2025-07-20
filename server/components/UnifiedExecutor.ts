@@ -11,6 +11,8 @@ import {
   streamText
 } from "ai";
 import { getErrorMessage } from "./Utils.js";
+// Import OpenAI types for proper response formatting
+import type { ChatCompletion, ChatCompletionChunk } from "openai/resources/chat/completions";
 // Import all AI SDK providers
 import { createOpenAI } from "@ai-sdk/openai";
 import { createAnthropic } from "@ai-sdk/anthropic";
@@ -31,6 +33,7 @@ import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { createOllama } from "ollama-ai-provider";
 import { createQwen } from "qwen-ai-provider";
 import { createGeminiProvider } from "ai-sdk-provider-gemini-cli"
+import {  createClaudeCode } from "ai-sdk-provider-claude-code"
 
 /**
  * Unified executor that handles all AI SDK v5 providers.
@@ -97,7 +100,9 @@ export class UnifiedExecutor {
     ["gemini-cli", (config) => createGeminiProvider({ 
       authType: "oauth-personal"
     })],
+    ["claude-code", (config) => createClaudeCode({
 
+    })],
     // OpenRouter - use compatible for now because their provider only supports v5.
     ["openrouter", (config) => createOpenAICompatible({
       name: config.id,
@@ -251,31 +256,102 @@ export class UnifiedExecutor {
 
   /**
    * Handles streaming responses and usage tracking.
-   * Preserved from BaseExecutor.
+   * Converts AI SDK stream to OpenAI API format.
    */
-  private handleStreamingResponse(
+  private async handleStreamingResponse(
     res: Response,
     provider: Provider,
     model: Model,
     result: StreamTextResult<any, any>,
-  ): void {
-    result.pipeTextStreamToResponse(res);
+  ): Promise<void> {
+    // Set up Server-Sent Events headers
+    res.writeHead(200, {
+      'Content-Type': 'text/plain; charset=utf-8',
+      'Transfer-Encoding': 'chunked',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive'
+    });
 
-    result.usage
-      .then((usage: any) => {
-        const cost = this.calculateCost(provider, model, usage);
-        // Convert usage format for UsageManager compatibility
-        const usageForManager = {
-          promptTokens: usage.promptTokens ?? usage.inputTokens ?? 0,
-          completionTokens: usage.completionTokens ?? usage.outputTokens ?? 0,
+    const streamId = `chatcmpl-${Date.now()}`;
+    const created = Math.floor(Date.now() / 1000);
+    const modelName = model.mappedName || model.name;
+
+    // Send initial chunk with role
+    const initialChunk: ChatCompletionChunk = {
+      id: streamId,
+      object: 'chat.completion.chunk',
+      created,
+      model: modelName,
+      choices: [{
+        index: 0,
+        delta: { role: 'assistant' },
+        finish_reason: null,
+        logprobs: null
+      }]
+    };
+    res.write(`data: ${JSON.stringify(initialChunk)}\n\n`);
+
+    try {
+      // Stream the text content
+      for await (const textDelta of result.textStream) {
+        const chunk: ChatCompletionChunk = {
+          id: streamId,
+          object: 'chat.completion.chunk',
+          created,
+          model: modelName,
+          choices: [{
+            index: 0,
+            delta: { content: textDelta },
+            finish_reason: null,
+            logprobs: null
+          }]
         };
-        // Use the real model name for usage tracking
-        // Use 0 as fallback if cost is undefined (pricing data not available)
-        this.usageManager.consume(provider.id, model.name, usageForManager, cost ?? 0);
-      })
-      .catch((error: any) => {
-        logger.error(`Failed to consume usage for streaming request: ${getErrorMessage(error)}`);
-      });
+        res.write(`data: ${JSON.stringify(chunk)}\n\n`);
+      }
+
+      // Wait for the stream to complete and get the finish reason
+      const finishReason = await result.finishReason;
+
+      // Send final chunk with finish_reason
+      const finalChunk: ChatCompletionChunk = {
+        id: streamId,
+        object: 'chat.completion.chunk',
+        created,
+        model: modelName,
+        choices: [{
+          index: 0,
+          delta: {},
+          finish_reason: finishReason as ChatCompletionChunk.Choice['finish_reason'],
+          logprobs: null
+        }]
+      };
+      res.write(`data: ${JSON.stringify(finalChunk)}\n\n`);
+      res.write('data: [DONE]\n\n');
+      res.end();
+
+      // Handle usage tracking
+      result.usage
+        .then((usage: any) => {
+          const cost = this.calculateCost(provider, model, usage);
+          // Convert usage format for UsageManager compatibility
+          const usageForManager = {
+            promptTokens: usage.promptTokens ?? usage.inputTokens ?? 0,
+            completionTokens: usage.completionTokens ?? usage.outputTokens ?? 0,
+          };
+          // Use the real model name for usage tracking
+          // Use 0 as fallback if cost is undefined (pricing data not available)
+          this.usageManager.consume(provider.id, model.name, usageForManager, cost ?? 0);
+        })
+        .catch((error: any) => {
+          logger.error(`Failed to consume usage for streaming request: ${getErrorMessage(error)}`);
+        });
+
+    } catch (error) {
+      logger.error(`Streaming error: ${getErrorMessage(error)}`);
+      res.write(`data: {"error": "Streaming failed"}\n\n`);
+      res.write('data: [DONE]\n\n');
+      res.end();
+    }
   }
 
   /**
@@ -297,7 +373,31 @@ export class UnifiedExecutor {
     // Use the real model name for usage tracking
     // Use 0 as fallback if cost is undefined (pricing data not available)
     this.usageManager.consume(provider.id, model.name, usageForManager, cost ?? 0);
-    res.json(result);
+
+    // Format response to match OpenAI API format using official types
+    const openAIResponse: ChatCompletion = {
+      id: `chatcmpl-${Date.now()}`,
+      object: "chat.completion",
+      created: Math.floor(Date.now() / 1000),
+      model: model.mappedName || model.name, // Use the mapped name that the client requested
+      choices: [{
+        index: 0,
+        message: {
+          role: "assistant",
+          content: result.text,
+          refusal: null
+        },
+        finish_reason: result.finishReason as ChatCompletion.Choice['finish_reason'],
+        logprobs: null
+      }],
+      usage: {
+        prompt_tokens: usageForManager.promptTokens,
+        completion_tokens: usageForManager.completionTokens,
+        total_tokens: usageForManager.promptTokens + usageForManager.completionTokens
+      }
+    };
+
+    res.json(openAIResponse);
   }
 
   /**

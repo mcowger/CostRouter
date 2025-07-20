@@ -77,7 +77,22 @@ export const requestResponseLogger = (
         `<-- ${method} ${url} ${statusCode} ${duration}ms`,
       );
     } else if (logger.isLevelEnabled("debug")) {
-      responseLogObject.choicePreview = lodash.get(responseBody, "text").slice(0, 40);
+      // Extract content preview from either OpenAI format or AI SDK format
+      let contentPreview = "";
+      if (responseBody) {
+        // Try OpenAI format first: choices[0].message.content
+        const openAIContent = lodash.get(responseBody, "choices[0].message.content");
+        if (openAIContent) {
+          contentPreview = openAIContent.slice(0, 40);
+        } else {
+          // Fallback to AI SDK format: text
+          const aiSdkContent = lodash.get(responseBody, "text");
+          if (aiSdkContent) {
+            contentPreview = aiSdkContent.slice(0, 40);
+          }
+        }
+      }
+      responseLogObject.choicePreview = contentPreview;
       logger.debug(
         responseLogObject,
         `<-- ${method} ${url} ${statusCode} ${duration}ms`,
