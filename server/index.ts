@@ -80,6 +80,15 @@ async function main() {
   // Apply request and response logging middleware
   app.use(requestResponseLogger);
 
+  // --- 4. Health Check Endpoint ---
+  app.get("/health", (_req, res) => {
+    res.json({
+      status: "ok",
+      timestamp: new Date().toISOString(),
+      version: "1.0.0"
+    });
+  });
+
   // --- 5. Core API Route ---
   app.post(
     "/v1/chat/completions",
