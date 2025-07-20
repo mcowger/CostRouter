@@ -1,6 +1,7 @@
 import { Provider } from "../../schemas/provider.schema.js";
 import { Model } from "../../schemas/model.schema.js";
 import { UsageManager } from "./UsageManager.js";
+import { PriceData } from "./PriceData.js";
 import { logger } from "./Logger.js";
 import { Request, Response } from "express";
 import {
@@ -203,30 +204,45 @@ export class UnifiedExecutor {
 
   /**
    * Calculates the cost of a request based on model pricing and usage.
-   * Preserved from BaseExecutor. Handles both old and new usage formats.
+   * Uses PriceData override logic: model.pricing if available, otherwise PriceData lookup.
+   * Handles both old and new usage formats.
+   * @returns The calculated cost in USD, or undefined if pricing data is not available
    */
-  private calculateCost(model: Model, usage: any): number {
-    const pricing = model.pricing;
-    if (!pricing || !usage) {
-      logger.debug(`No pricing or usage data for model '${model.name}'. Cost is 0.`);
-      return 0;
+  private calculateCost(provider: Provider, model: Model, usage: any): number | undefined {
+    if (!usage) {
+      logger.debug(`No usage data for model '${model.name}'. Cannot calculate cost.`);
+      return undefined;
     }
 
-    // If a flat request cost is defined, it overrides token-based pricing.
-    if (pricing.costPerRequest) {
-      return pricing.costPerRequest;
+    // Get pricing using override logic: model.pricing first, then PriceData lookup
+    try {
+      const priceData = PriceData.getInstance();
+      const pricing = priceData.getPriceWithOverride(provider.type, model);
+
+      if (!pricing) {
+        logger.debug(`No pricing data available for model '${model.name}' in provider '${provider.type}'. Cannot calculate cost.`);
+        return undefined;
+      }
+
+      // If a flat request cost is defined, it overrides token-based pricing.
+      if (pricing.costPerRequest) {
+        return pricing.costPerRequest;
+      }
+
+      // Handle both v1 and v2 usage formats
+      const inputTokens = usage.promptTokens ?? usage.inputTokens ?? 0;
+      const outputTokens = usage.completionTokens ?? usage.outputTokens ?? 0;
+
+      const inputCost = (inputTokens / 1_000_000) * (pricing.inputCostPerMillionTokens ?? 0);
+      const outputCost = (outputTokens / 1_000_000) * (pricing.outputCostPerMillionTokens ?? 0);
+
+      const totalCost = inputCost + outputCost;
+      logger.debug(`Calculated cost for model '${model.name}': $${totalCost.toFixed(6)}`);
+      return totalCost;
+    } catch (error) {
+      logger.debug(`Error calculating cost for model '${model.name}': ${getErrorMessage(error)}. Using fallback.`);
+      return undefined;
     }
-
-    // Handle both v1 and v2 usage formats
-    const inputTokens = usage.promptTokens ?? usage.inputTokens ?? 0;
-    const outputTokens = usage.completionTokens ?? usage.outputTokens ?? 0;
-
-    const inputCost = (inputTokens / 1_000_000) * (pricing.inputCostPerMillionTokens ?? 0);
-    const outputCost = (outputTokens / 1_000_000) * (pricing.outputCostPerMillionTokens ?? 0);
-
-    const totalCost = inputCost + outputCost;
-    logger.debug(`Calculated cost for model '${model.name}': $${totalCost.toFixed(6)}`);
-    return totalCost;
   }
 
   /**
@@ -243,14 +259,15 @@ export class UnifiedExecutor {
 
     result.usage
       .then((usage: any) => {
-        const cost = this.calculateCost(model, usage);
+        const cost = this.calculateCost(provider, model, usage);
         // Convert usage format for UsageManager compatibility
         const usageForManager = {
           promptTokens: usage.promptTokens ?? usage.inputTokens ?? 0,
           completionTokens: usage.completionTokens ?? usage.outputTokens ?? 0,
         };
         // Use the real model name for usage tracking
-        this.usageManager.consume(provider.id, model.name, usageForManager, cost);
+        // Use 0 as fallback if cost is undefined (pricing data not available)
+        this.usageManager.consume(provider.id, model.name, usageForManager, cost ?? 0);
       })
       .catch((error: any) => {
         logger.error(`Failed to consume usage for streaming request: ${getErrorMessage(error)}`);
@@ -267,14 +284,15 @@ export class UnifiedExecutor {
     model: Model,
     result: GenerateTextResult<any, any>,
   ): void {
-    const cost = this.calculateCost(model, result.usage);
+    const cost = this.calculateCost(provider, model, result.usage);
     // Convert usage format for UsageManager compatibility
     const usageForManager = {
       promptTokens: (result.usage as any).promptTokens ?? (result.usage as any).inputTokens ?? 0,
       completionTokens: (result.usage as any).completionTokens ?? (result.usage as any).outputTokens ?? 0,
     };
     // Use the real model name for usage tracking
-    this.usageManager.consume(provider.id, model.name, usageForManager, cost);
+    // Use 0 as fallback if cost is undefined (pricing data not available)
+    this.usageManager.consume(provider.id, model.name, usageForManager, cost ?? 0);
     res.json(result);
   }
 

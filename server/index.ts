@@ -5,6 +5,7 @@ import { hideBin } from "yargs/helpers";
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { ConfigManager } from "./components/ConfigManager.js";
+import { PriceData } from "./components/PriceData.js";
 import { Router } from "./components/Router.js";
 import { UsageManager } from "./components/UsageManager.js";
 import { UsageDatabaseManager } from "./components/UsageDatabaseManager.js";
@@ -48,6 +49,7 @@ async function main() {
 
   // --- 2. Initialize Singletons in Order ---
   await ConfigManager.initialize(argv.config);
+  await PriceData.initialize();
   UsageManager.initialize();
   Router.initialize();
 

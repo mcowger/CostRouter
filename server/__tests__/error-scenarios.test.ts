@@ -44,6 +44,18 @@ jest.mock('../components/Utils.js', () => ({
   getErrorMessage: jest.fn((error: any) => error.message || 'Unknown error')
 }));
 
+// Mock PriceData
+jest.mock('../components/PriceData.js', () => ({
+  PriceData: {
+    getInstance: jest.fn(() => ({
+      getPriceWithOverride: jest.fn(() => ({
+        inputCostPerMillionTokens: 1000,
+        outputCostPerMillionTokens: 2000
+      }))
+    }))
+  }
+}));
+
 describe('Error Scenarios and Edge Cases', () => {
   const mockUsageManager = {
     consume: jest.fn(),

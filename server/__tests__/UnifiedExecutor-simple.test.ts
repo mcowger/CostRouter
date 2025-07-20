@@ -52,7 +52,30 @@ jest.mock('../components/Utils.js', () => ({
   getErrorMessage: jest.fn((error: any) => error.message || 'Unknown error')
 }));
 
+// Mock PriceData
+const mockGetPriceWithOverride = jest.fn(() => ({
+  inputCostPerMillionTokens: 1000,
+  outputCostPerMillionTokens: 2000
+}));
+
+jest.mock('../components/PriceData.js', () => ({
+  PriceData: {
+    getInstance: jest.fn(() => ({
+      getPriceWithOverride: mockGetPriceWithOverride
+    }))
+  }
+}));
+
 describe('UnifiedExecutor - Basic Tests', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    // Reset the PriceData mock
+    mockGetPriceWithOverride.mockReturnValue({
+      inputCostPerMillionTokens: 1000,
+      outputCostPerMillionTokens: 2000
+    });
+  });
+
   // Mock data
   const mockUsage = {
     promptTokens: 100,
@@ -146,7 +169,8 @@ describe('UnifiedExecutor - Basic Tests', () => {
     (generateText as jest.MockedFunction<typeof generateText>).mockResolvedValue(mockGenerateTextResult as any);
     (createOpenAI as jest.MockedFunction<typeof createOpenAI>).mockReturnValue((modelName: string) => ({
       modelId: modelName,
-      provider: 'openai'
+      provider: 'openai',
+      // Add any other properties that the AI SDK model might expect
     }) as any);
 
     const executor = new UnifiedExecutor(mockUsageManager as any);
@@ -156,6 +180,7 @@ describe('UnifiedExecutor - Basic Tests', () => {
     await executor.execute(req as any, res as any);
 
     expect(generateText).toHaveBeenCalled();
+    expect(mockUsageManager.consume).toHaveBeenCalled();
     expect(res.json).toHaveBeenCalledWith(mockGenerateTextResult);
   });
 
