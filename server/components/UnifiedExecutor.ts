@@ -193,15 +193,27 @@ export class UnifiedExecutor {
       const model = providerInstance(chosenModel.name);
 
       // Extract request data
-      const { messages, stream = false } = req.body;
+      const { messages, stream = false, n = 1 } = req.body;
 
       // Execute the request using AI SDK
       if (stream) {
+        // Note: Streaming doesn't support multiple choices (n > 1) in OpenAI API
+        if (n > 1) {
+          logger.warn(`Streaming requests don't support n > 1. Using n = 1 instead of ${n}`);
+        }
         const result = streamText({ model: model as any, messages });
         this.handleStreamingResponse(res, chosenProvider, chosenModel, result);
       } else {
-        const result = await generateText({ model: model as any, messages });
-        this.handleNonStreamingResponse(res, chosenProvider, chosenModel, result);
+        // Handle multiple choices for non-streaming requests
+        if (n > 1) {
+          const results = await Promise.all(
+            Array.from({ length: n }, () => generateText({ model: model as any, messages }))
+          );
+          this.handleMultipleChoicesResponse(res, chosenProvider, chosenModel, results);
+        } else {
+          const result = await generateText({ model: model as any, messages });
+          this.handleNonStreamingResponse(res, chosenProvider, chosenModel, result);
+        }
       }
     } catch (error) {
       logger.error(
@@ -394,6 +406,66 @@ export class UnifiedExecutor {
         prompt_tokens: usageForManager.promptTokens,
         completion_tokens: usageForManager.completionTokens,
         total_tokens: usageForManager.promptTokens + usageForManager.completionTokens
+      }
+    };
+
+    res.json(openAIResponse);
+  }
+
+  /**
+   * Handles multiple choices responses for non-streaming requests when n > 1.
+   * Combines multiple GenerateTextResult objects into a single OpenAI-compatible response.
+   */
+  private handleMultipleChoicesResponse(
+    res: Response,
+    provider: Provider,
+    model: Model,
+    results: GenerateTextResult<any, any>[],
+  ): void {
+    // Calculate total cost and usage across all results
+    let totalCost = 0;
+    let totalPromptTokens = 0;
+    let totalCompletionTokens = 0;
+
+    // Process each result for usage tracking
+    results.forEach((result) => {
+      const cost = this.calculateCost(provider, model, result.usage) ?? 0;
+      totalCost += cost;
+
+      const promptTokens = (result.usage as any).promptTokens ?? (result.usage as any).inputTokens ?? 0;
+      const completionTokens = (result.usage as any).completionTokens ?? (result.usage as any).outputTokens ?? 0;
+
+      totalPromptTokens += promptTokens;
+      totalCompletionTokens += completionTokens;
+    });
+
+    // Track usage with combined totals
+    const usageForManager = {
+      promptTokens: totalPromptTokens,
+      completionTokens: totalCompletionTokens,
+    };
+    this.usageManager.consume(provider.id, model.name, usageForManager, totalCost);
+
+    // Format response to match OpenAI API format with multiple choices
+    const openAIResponse: ChatCompletion = {
+      id: `chatcmpl-${Date.now()}`,
+      object: "chat.completion",
+      created: Math.floor(Date.now() / 1000),
+      model: model.mappedName || model.name,
+      choices: results.map((result, index) => ({
+        index,
+        message: {
+          role: "assistant",
+          content: result.text,
+          refusal: null
+        },
+        finish_reason: result.finishReason as ChatCompletion.Choice['finish_reason'],
+        logprobs: null
+      })),
+      usage: {
+        prompt_tokens: totalPromptTokens,
+        completion_tokens: totalCompletionTokens,
+        total_tokens: totalPromptTokens + totalCompletionTokens
       }
     };
 
