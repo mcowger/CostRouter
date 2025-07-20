@@ -19,7 +19,7 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "test:ci": "jest --ci --coverage --watchAll=false",
-    "test:e2e": "tsx test/scripts/run-e2e-tests.ts",
+    "test:e2e": "jest --config jest.e2e.config.js",
     "test:e2e:env": "tsx test/scripts/start-test-environment.ts",
     "test:mock-server": "tsx test/mock-server/start-mock-server.ts",
     "test:all": "pnpm test && pnpm test:e2e"
