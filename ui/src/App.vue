@@ -15,7 +15,6 @@ onMounted(() => {
 <template>
   <div id="app">
     <header class="app-header">
-      <h1>LLM Gateway</h1>
       <nav class="tab-nav">
         <button
           @click="activeTab = 'dashboard'"
@@ -58,12 +57,6 @@ onMounted(() => {
   border-bottom: 1px solid var(--color-border);
   padding: 20px;
   text-align: center;
-}
-
-.app-header h1 {
-  margin: 0 0 20px 0;
-  color: var(--color-heading);
-  font-size: 28px;
 }
 
 .tab-nav {

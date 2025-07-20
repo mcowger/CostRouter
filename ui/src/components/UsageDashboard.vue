@@ -1,7 +1,7 @@
 <template>
   <div class="usage-dashboard">
     <h2>Real-time Usage Dashboard</h2>
-    
+
     <div v-if="loading" class="loading">
       Loading usage data...
     </div>
@@ -31,39 +31,44 @@
               <span v-else>{{ model.name }}</span>
             </h4>
 
-            <!-- Always show the limits container with usage data -->
-            <div class="limits-container">
-              <!-- Group limits by type (requests, tokens, cost) -->
-              <div v-for="group in getLimitGroups(model.limits)" :key="group.type" class="limit-group">
-                <h5 class="group-title">{{ group.title }}</h5>
-                <div class="group-items">
-                  <div
-                    v-for="item in group.items"
-                    :key="item.period"
-                    class="compact-limit-item"
-                  >
-                    <div class="compact-header">
-                      <span class="period-label">{{ item.period }}</span>
-                      <span class="compact-values">
-                        {{ formatValue(item.usage.consumed, item.usage.unit) }} / {{ formatValue(item.usage.limit, item.usage.unit) }}
-                      </span>
-                      <span class="compact-percentage" :class="getProgressBarClass(item.usage.percentage)">
-                        {{ item.usage.limit === -1 ? '0%' : item.usage.percentage + '%' }}
-                      </span>
-                    </div>
-
-                    <div class="compact-progress-container">
-                      <div
-                        class="compact-progress-bar"
-                        :class="item.usage.limit === -1 ? 'infinite' : getProgressBarClass(item.usage.percentage)"
-                        :style="{ width: item.usage.limit === -1 ? '100%' : Math.min(item.usage.percentage, 100) + '%' }"
-                      ></div>
-                    </div>
-
-                    <div v-if="item.usage.msBeforeNext > 0" class="compact-reset-time">
-                      Resets in {{ formatTimeRemaining(item.usage.msBeforeNext) }}
-                    </div>
+            <!-- Compact vertical bar chart display -->
+            <div class="chart-container">
+              <div class="chart-bars">
+                <div
+                  v-for="item in getChartData(model.limits)"
+                  :key="item.key"
+                  class="chart-bar-group"
+                >
+                  <div class="chart-bar-container">
+                    <div
+                      class="chart-bar"
+                      :class="item.usage.limit === -1 ? 'infinite' : item.type"
+                      :style="{ height: getBarHeight(item.usage.percentage, item.usage.limit) }"
+                      :title="`${item.label}: ${formatValue(item.usage.consumed, item.usage.unit)} / ${formatValue(item.usage.limit, item.usage.unit)} (${item.usage.limit === -1 ? '0%' : item.usage.percentage + '%'})`"
+                    ></div>
                   </div>
+                  <div class="chart-label">{{ item.shortLabel }}</div>
+                  <div class="chart-value">{{ formatValue(item.usage.consumed, item.usage.unit) }}</div>
+                </div>
+              </div>
+
+              <!-- Legend -->
+              <div class="chart-legend">
+                <div class="legend-item">
+                  <div class="legend-color requests"></div>
+                  <span>Requests</span>
+                </div>
+                <div class="legend-item">
+                  <div class="legend-color tokens"></div>
+                  <span>Tokens</span>
+                </div>
+                <div class="legend-item">
+                  <div class="legend-color cost"></div>
+                  <span>Cost</span>
+                </div>
+                <div class="legend-item">
+                  <div class="legend-color infinite"></div>
+                  <span>Unlimited</span>
                 </div>
               </div>
             </div>
@@ -187,6 +192,53 @@ const hasAnyActiveLimits = (provider: ProviderUsage): boolean => {
   return provider.models.length > 0;
 };
 
+const getChartData = (limits: Record<string, any>) => {
+  const chartData = [];
+
+  // Define the order and labels for the chart
+  const limitTypes = [
+    { key: 'requestsPerMinute', label: 'Requests Per Minute', shortLabel: 'Req/Min', type: 'requests' },
+    { key: 'requestsPerHour', label: 'Requests Per Hour', shortLabel: 'Req/Hr', type: 'requests' },
+    { key: 'requestsPerDay', label: 'Requests Per Day', shortLabel: 'Req/Day', type: 'requests' },
+    { key: 'tokensPerMinute', label: 'Tokens Per Minute', shortLabel: 'Tok/Min', type: 'tokens' },
+    { key: 'tokensPerHour', label: 'Tokens Per Hour', shortLabel: 'Tok/Hr', type: 'tokens' },
+    { key: 'tokensPerDay', label: 'Tokens Per Day', shortLabel: 'Tok/Day', type: 'tokens' },
+    { key: 'costPerMinute', label: 'Cost Per Minute', shortLabel: 'Cost/Min', type: 'cost' },
+    { key: 'costPerHour', label: 'Cost Per Hour', shortLabel: 'Cost/Hr', type: 'cost' },
+    { key: 'costPerDay', label: 'Cost Per Day', shortLabel: 'Cost/Day', type: 'cost' },
+  ];
+
+  for (const limitType of limitTypes) {
+    if (limits[limitType.key]) {
+      chartData.push({
+        key: limitType.key,
+        label: limitType.label,
+        shortLabel: limitType.shortLabel,
+        type: limitType.type,
+        usage: limits[limitType.key]
+      });
+    }
+  }
+
+  return chartData;
+};
+
+const getBarClass = (percentage: number): string => {
+  if (percentage >= 90) return 'danger';
+  if (percentage >= 75) return 'warning';
+  return 'success';
+};
+
+const getBarHeight = (percentage: number, limit: number): string => {
+  if (limit === -1) {
+    // For infinite limits, show a small bar to indicate activity
+    return '10px';
+  }
+  // Minimum height of 3px, maximum of 50px
+  const height = Math.max(3, Math.min(50, percentage / 2));
+  return `${height}px`;
+};
+
 const formatValue = (value: number, unit: string): string => {
   // Handle infinite limits (marked as -1)
   if (value === -1) {
@@ -238,70 +290,72 @@ onUnmounted(() => {
 
 <style scoped>
 .usage-dashboard {
-  padding: 20px;
+  padding: 10px;
   width: 100%;
 }
 
 .usage-dashboard h2 {
   text-align: center;
-  margin-bottom: 30px;
+  margin-bottom: 15px;
   color: var(--color-heading);
+  font-size: 1.5rem;
+  font-weight: 600;
 }
 
 .loading, .error {
   text-align: center;
-  padding: 20px;
-  font-size: 16px;
+  padding: 10px;
+  font-size: 12px;
 }
 
 .error {
   color: #e74c3c;
   background-color: #fdf2f2;
   border: 1px solid #f5c6cb;
-  border-radius: 5px;
+  border-radius: 3px;
 }
 
 .dashboard-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 20px;
-  margin-bottom: 20px;
+  gap: 10px;
+  margin-bottom: 10px;
 }
 
 .provider-card {
   background: var(--color-background-soft);
   border: 1px solid var(--color-border);
-  border-radius: 8px;
-  padding: 20px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border-radius: 4px;
+  padding: 10px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .provider-title {
-  margin: 0 0 15px 0;
+  margin: 0 0 4px 0;
   color: var(--color-heading);
-  font-size: 18px;
+  font-size: 14px;
   font-weight: 600;
 }
 
 .models-container {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 10px;
 }
 
 .model-section {
   background: var(--color-background-soft);
-  border-radius: 6px;
-  padding: 15px;
+  border-radius: 3px;
+  padding: 7px;
   border: 1px solid var(--color-border);
 }
 
 .model-title {
-  margin: 0 0 12px 0;
+  margin: 0 0 3px 0;
   color: var(--color-heading);
-  font-size: 16px;
+  font-size: 12px;
   font-weight: 600;
-  padding-bottom: 8px;
+  padding-bottom: 4px;
   border-bottom: 1px solid var(--color-border);
 }
 
@@ -313,7 +367,7 @@ onUnmounted(() => {
 .real-name {
   font-weight: 400;
   color: var(--color-text-2);
-  font-size: 14px;
+  font-size: 10px;
   margin-left: 8px;
 }
 
@@ -430,6 +484,121 @@ onUnmounted(() => {
   opacity: 0.6;
 }
 
+/* Chart Layout */
+.chart-container {
+  padding: 7px;
+}
+
+.chart-bars {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  height: 60px;
+  margin-bottom: 7px;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.chart-bar-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  margin: 0 1px;
+}
+
+.chart-bar-container {
+  height: 50px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  width: 100%;
+}
+
+.chart-bar {
+  width: 15px;
+  min-height: 3px;
+  border-radius: 1px 1px 0 0;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.chart-bar:hover {
+  opacity: 0.8;
+  transform: scaleY(1.05);
+}
+
+.chart-bar.requests {
+  background: linear-gradient(to top, #3498db, #2980b9);
+}
+
+.chart-bar.tokens {
+  background: linear-gradient(to top, #2ecc71, #27ae60);
+}
+
+.chart-bar.cost {
+  background: linear-gradient(to top, #e74c3c, #c0392b);
+}
+
+.chart-bar.infinite {
+  background: linear-gradient(to top, #95a5a6, #7f8c8d);
+  opacity: 0.7;
+}
+
+.chart-label {
+  font-size: 8px;
+  color: var(--color-text);
+  text-align: center;
+  margin-top: 2px;
+  line-height: 1.1;
+  font-weight: 500;
+}
+
+.chart-value {
+  font-size: 7px;
+  color: var(--color-text-muted);
+  text-align: center;
+  margin-top: 1px;
+  font-weight: 600;
+}
+
+.chart-legend {
+  display: flex;
+  justify-content: center;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  color: var(--color-text);
+}
+
+.legend-color {
+  width: 8px;
+  height: 8px;
+  border-radius: 1px;
+}
+
+.legend-color.requests {
+  background: linear-gradient(45deg, #3498db, #2980b9);
+}
+
+.legend-color.tokens {
+  background: linear-gradient(45deg, #2ecc71, #27ae60);
+}
+
+.legend-color.cost {
+  background: linear-gradient(45deg, #e74c3c, #c0392b);
+}
+
+.legend-color.infinite {
+  background: linear-gradient(45deg, #95a5a6, #7f8c8d);
+}
+
 .compact-reset-time {
   font-size: 10px;
   color: var(--color-text);
@@ -458,9 +627,9 @@ onUnmounted(() => {
 
 .last-updated {
   text-align: center;
-  font-size: 12px;
+  font-size: 10px;
   color: var(--color-text);
-  margin-top: 20px;
+  margin-top: 10px;
 }
 
 /* Responsive breakpoints for better card layout */
@@ -510,19 +679,19 @@ onUnmounted(() => {
 
 @media (max-width: 480px) {
   .usage-dashboard {
-    padding: 15px;
+    padding: 7px;
   }
 
   .dashboard-grid {
-    gap: 10px;
+    gap: 5px;
   }
 
   .provider-card {
-    padding: 12px;
+    padding: 6px;
   }
 
   .provider-title {
-    font-size: 16px;
+    font-size: 12px;
   }
 
   .group-title {
