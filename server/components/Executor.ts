@@ -30,7 +30,7 @@ export class Executor {
   public async execute(req: Request, res: Response): Promise<void> {
     const chosenProvider = res.locals.chosenProvider as Provider;
 
-    logger.debug(`Executing request for provider: ${chosenProvider.id} (${chosenProvider.type})`);
+    logger.debug(`Executing request for provider: ${chosenProvider.id} as (${chosenProvider.type})`);
 
     try {
       await this.unifiedExecutor.execute(req, res);
