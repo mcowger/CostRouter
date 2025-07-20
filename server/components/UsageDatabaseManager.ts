@@ -47,7 +47,6 @@ export class UsageDatabaseManager {
 
     this.db.data.records.push(parsedRecord);
     await this.db.write();
-    logger.info("Recorded usage to database:", parsedRecord);
   }
 
   public async getUsage(hours: number, filters: { model?: string; providerId?: string }): Promise<UsageRecord[]> {
