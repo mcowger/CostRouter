@@ -96,22 +96,35 @@ export class UsageManager {
       ["costPerMinute", 60, "cost"], ["costPerHour", 3600, "cost"], ["costPerDay", 86400, "cost"],
     ];
 
-    // Create limiters for each model that has limits defined
+    // Maximum value for tracking without limits (2^31 - 1)
+    const MAX_TRACKING_POINTS = 2147483647;
+
+    // Create limiters for ALL models to enable usage tracking
     for (const model of provider.models) {
-      if (!model.limits) continue;
-
       for (const [limitType, duration, type] of limitConfigs) {
-        let points = model.limits[limitType];
+        let points: number;
 
-        if (points) {
+        // Check if model has explicit limits configured
+        if (model.limits && model.limits[limitType] !== undefined && model.limits[limitType]! > 0) {
+          points = model.limits[limitType]!;
           // Convert cost limits from dollars to integer points
           if (type === 'cost') {
             points = Math.floor(points * COST_MULTIPLIER);
           }
+        } else {
+          // No explicit limit - use max value for tracking purposes
+          points = MAX_TRACKING_POINTS;
+        }
 
-          const key = `${provider.id}/${model.name}/${limitType}`;
-          const opts: IRateLimiterOptions = { points, duration };
-          this.limiters.set(key, new RateLimiterMemory(opts));
+        const key = `${provider.id}/${model.name}/${limitType}`;
+        const opts: IRateLimiterOptions = { points, duration };
+        this.limiters.set(key, new RateLimiterMemory(opts));
+
+        if (points === MAX_TRACKING_POINTS) {
+          logger.debug(
+            `Limiter: '${key}': unlimited tracking for ${type}/${formatDuration(duration)} (${duration}s).`,
+          );
+        } else {
           logger.debug(
             `Limiter: '${key}': ${points} ${type}/${formatDuration(duration)} (${duration}s).`,
           );
@@ -227,6 +240,9 @@ export class UsageManager {
       ["costPerMinute", "USD"], ["costPerHour", "USD"], ["costPerDay", "USD"],
     ];
 
+    // Maximum value for tracking without limits (2^31 - 1)
+    const MAX_TRACKING_POINTS = 2147483647;
+
     for (const provider of providers) {
       const modelUsages: ModelUsage[] = [];
 
@@ -238,47 +254,57 @@ export class UsageManager {
           limits: {}
         };
 
-        // Check if model has limits object (even if all values are undefined)
-        if (model.limits) {
-          // Check each limit type for this model
-          for (const [limitType, unit] of limitConfigs) {
-            const limitValue = model.limits[limitType];
-            if (limitValue !== undefined && limitValue > 0) {
-              const key = `${provider.id}/${model.name}/${limitType}`;
-              const limiter = this.limiters.get(key);
+        // Process all limit types for this model (we now track everything)
+        for (const [limitType, unit] of limitConfigs) {
+          const key = `${provider.id}/${model.name}/${limitType}`;
+          const limiter = this.limiters.get(key);
 
-              if (limiter) {
-                try {
-                  const res = await limiter.get(`${provider.id}/${model.name}`);
-                  let consumed = 0;
-                  let limit = limitValue;
-                  let msBeforeNext = 0;
+          if (limiter) {
+            try {
+              const res = await limiter.get(`${provider.id}/${model.name}`);
+              let consumed = 0;
+              let limit: number;
+              let msBeforeNext = 0;
+              let isInfinite = false;
 
-                  if (res) {
-                    consumed = res.consumedPoints;
-                    msBeforeNext = res.msBeforeNext;
-                  }
+              if (res) {
+                consumed = res.consumedPoints;
+                msBeforeNext = res.msBeforeNext;
+              }
 
-                  // Convert cost points back to USD for display
-                  if (unit === 'USD') {
-                    consumed = consumed / COST_MULTIPLIER;
-                    // limit is already in USD from config
-                  }
+              // Determine the actual limit value
+              if (model.limits && model.limits[limitType] !== undefined && model.limits[limitType]! > 0) {
+                // Model has explicit limit configured
+                limit = model.limits[limitType]!;
+              } else {
+                // Model has no explicit limit - mark as infinite
+                limit = MAX_TRACKING_POINTS;
+                isInfinite = true;
+              }
 
-                  const percentage = limit > 0 ? Math.round((consumed / limit) * 100) : 0;
-
-                  modelUsage.limits[limitType] = {
-                    consumed,
-                    limit,
-                    percentage,
-                    msBeforeNext,
-                    unit
-                  };
-                } catch (error) {
-                  logger.warn(`Error getting usage data for ${key}: ${getErrorMessage(error)}`);
-                  // Continue with other limiters even if one fails
+              // Convert cost points back to USD for display
+              if (unit === 'USD') {
+                consumed = consumed / COST_MULTIPLIER;
+                if (!isInfinite) {
+                  // limit is already in USD from config for explicit limits
+                } else {
+                  // For infinite limits, keep the large number for percentage calculation
+                  limit = MAX_TRACKING_POINTS / COST_MULTIPLIER;
                 }
               }
+
+              const percentage = limit > 0 ? Math.round((consumed / limit) * 100) : 0;
+
+              modelUsage.limits[limitType] = {
+                consumed,
+                limit: isInfinite ? -1 : limit, // Use -1 to indicate infinite limit
+                percentage,
+                msBeforeNext,
+                unit
+              };
+            } catch (error) {
+              logger.warn(`Error getting usage data for ${key}: ${getErrorMessage(error)}`);
+              // Continue with other limiters even if one fails
             }
           }
         }

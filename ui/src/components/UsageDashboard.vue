@@ -18,13 +18,8 @@
       >
         <h3 class="provider-title">{{ provider.id }}</h3>
 
-        <!-- Show message if no models have active limits configured -->
-        <div v-if="!hasAnyActiveLimits(provider)" class="no-limits">
-          No rate limits configured for any models in this provider
-        </div>
-
-        <!-- Display each model's limits -->
-        <div v-else class="models-container">
+        <!-- Always show models since we now track everything -->
+        <div class="models-container">
           <div
             v-for="model in provider.models"
             :key="model.name"
@@ -36,12 +31,8 @@
               <span v-else>{{ model.name }}</span>
             </h4>
 
-            <!-- Show message if this specific model has no active limits -->
-            <div v-if="Object.keys(model.limits).length === 0" class="no-model-limits">
-              No rate limits configured for this model
-            </div>
-
-            <div v-else class="limits-container">
+            <!-- Always show the limits container with usage data -->
+            <div class="limits-container">
               <!-- Group limits by type (requests, tokens, cost) -->
               <div v-for="group in getLimitGroups(model.limits)" :key="group.type" class="limit-group">
                 <h5 class="group-title">{{ group.title }}</h5>
@@ -57,15 +48,15 @@
                         {{ formatValue(item.usage.consumed, item.usage.unit) }} / {{ formatValue(item.usage.limit, item.usage.unit) }}
                       </span>
                       <span class="compact-percentage" :class="getProgressBarClass(item.usage.percentage)">
-                        {{ item.usage.percentage }}%
+                        {{ item.usage.limit === -1 ? '0%' : item.usage.percentage + '%' }}
                       </span>
                     </div>
 
                     <div class="compact-progress-container">
                       <div
                         class="compact-progress-bar"
-                        :class="getProgressBarClass(item.usage.percentage)"
-                        :style="{ width: Math.min(item.usage.percentage, 100) + '%' }"
+                        :class="item.usage.limit === -1 ? 'infinite' : getProgressBarClass(item.usage.percentage)"
+                        :style="{ width: item.usage.limit === -1 ? '100%' : Math.min(item.usage.percentage, 100) + '%' }"
                       ></div>
                     </div>
 
@@ -191,10 +182,17 @@ const getLimitGroups = (limits: { [key: string]: LimitUsage }) => {
 };
 
 const hasAnyActiveLimits = (provider: ProviderUsage): boolean => {
-  return provider.models.some(model => Object.keys(model.limits).length > 0);
+  // Since we now track all models, we should always show them
+  // The "no limits" message should only show if there are truly no models
+  return provider.models.length > 0;
 };
 
 const formatValue = (value: number, unit: string): string => {
+  // Handle infinite limits (marked as -1)
+  if (value === -1) {
+    return '∞';
+  }
+
   if (unit === 'USD') {
     return `$${value.toFixed(4)}`;
   } else if (unit === 'tokens' && value >= 1000) {
@@ -425,6 +423,11 @@ onUnmounted(() => {
 
 .compact-progress-bar.danger {
   background-color: #e74c3c;
+}
+
+.compact-progress-bar.infinite {
+  background: linear-gradient(90deg, #95a5a6, #7f8c8d);
+  opacity: 0.6;
 }
 
 .compact-reset-time {
