@@ -49,39 +49,167 @@
           <div class="form-group">
             <label for="type">Type:</label>
             <select v-model="provider.type" id="type" class="form-input">
-              <option value="openai">OpenAI</option>
-              <option value="custom">Custom</option>
-              <option value="copilot">Copilot</option>
+              <option
+                v-for="option in providerTypeOptions"
+                :key="option.value"
+                :value="option.value"
+              >
+                {{ option.label }}
+              </option>
             </select>
           </div>
-          
-          <!-- OpenAI-specific fields -->
-          <div v-if="provider.type === 'openai'" class="openai-fields">
-            <div class="form-group">
-              <label for="baseURL">Base URL:</label>
-              <input 
-                type="text" 
-                v-model="provider.baseURL" 
-                id="baseURL" 
+
+          <!-- Provider-specific fields -->
+          <div class="provider-fields">
+            <!-- API Key field (for most providers) -->
+            <div v-if="isApiKeyRequired(provider.type)" class="form-group">
+              <label for="apiKey">
+                API Key
+                <span v-if="isApiKeyRequired(provider.type)" class="required">*</span>
+              </label>
+              <input
+                type="password"
+                v-model="provider.apiKey"
+                id="apiKey"
                 class="form-input"
-                placeholder="https://api.openai.com/v1"
+                :placeholder="getApiKeyPlaceholder(provider.type)"
+                :required="isApiKeyRequired(provider.type)"
               />
             </div>
-            
-            <div class="form-group">
-              <label for="apiKey">API Key:</label>
-              <input 
-                type="password" 
-                v-model="provider.apiKey" 
-                id="apiKey" 
+
+            <!-- Base URL field (for OpenAI-compatible and some others) -->
+            <div v-if="requiresBaseUrl(provider.type)" class="form-group">
+              <label for="baseURL">
+                Base URL
+                <span v-if="isBaseUrlRequired(provider.type)" class="required">*</span>
+              </label>
+              <input
+                type="url"
+                v-model="provider.baseURL"
+                id="baseURL"
                 class="form-input"
-                placeholder="sk-..."
+                :placeholder="getBaseUrlPlaceholder(provider.type)"
+                :required="isBaseUrlRequired(provider.type)"
               />
+            </div>
+
+            <!-- Azure-specific fields -->
+            <div v-if="requiresAzureFields(provider.type)" class="azure-fields">
+              <div class="form-group">
+                <label for="resourceName">
+                  Resource Name
+                  <span class="required">*</span>
+                </label>
+                <input
+                  type="text"
+                  v-model="provider.resourceName"
+                  id="resourceName"
+                  class="form-input"
+                  placeholder="your-azure-resource"
+                  required
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="deploymentName">
+                  Deployment Name
+                  <span class="required">*</span>
+                </label>
+                <input
+                  type="text"
+                  v-model="provider.deploymentName"
+                  id="deploymentName"
+                  class="form-input"
+                  placeholder="your-deployment-name"
+                  required
+                />
+              </div>
+            </div>
+
+            <!-- AWS Bedrock-specific fields -->
+            <div v-if="requiresBedrockFields(provider.type)" class="bedrock-fields">
+              <div class="form-group">
+                <label for="accessKeyId">
+                  AWS Access Key ID
+                  <span class="required">*</span>
+                </label>
+                <input
+                  type="text"
+                  v-model="provider.accessKeyId"
+                  id="accessKeyId"
+                  class="form-input"
+                  placeholder="AKIA..."
+                  required
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="secretAccessKey">
+                  AWS Secret Access Key
+                  <span class="required">*</span>
+                </label>
+                <input
+                  type="password"
+                  v-model="provider.secretAccessKey"
+                  id="secretAccessKey"
+                  class="form-input"
+                  placeholder="Your AWS secret key"
+                  required
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="region">
+                  AWS Region
+                  <span class="required">*</span>
+                </label>
+                <input
+                  type="text"
+                  v-model="provider.region"
+                  id="region"
+                  class="form-input"
+                  placeholder="us-east-1"
+                  required
+                />
+              </div>
+            </div>
+
+            <!-- Google Vertex AI-specific fields -->
+            <div v-if="requiresVertexFields(provider.type)" class="vertex-fields">
+              <div class="form-group">
+                <label for="resourceName">
+                  Project ID
+                  <span class="required">*</span>
+                </label>
+                <input
+                  type="text"
+                  v-model="provider.resourceName"
+                  id="resourceName"
+                  class="form-input"
+                  placeholder="your-gcp-project-id"
+                  required
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="region">Location (optional)</label>
+                <input
+                  type="text"
+                  v-model="provider.region"
+                  id="region"
+                  class="form-input"
+                  placeholder="us-central1"
+                />
+              </div>
+            </div>
+
+            <!-- Provider-specific help text -->
+            <div v-if="getProviderHelpText(provider.type)" class="help-text">
+              <small>{{ getProviderHelpText(provider.type) }}</small>
             </div>
           </div>
-          
 
-          
+
           <!-- Models Accordion -->
           <details v-if="provider.models && provider.models.length" class="accordion">
             <summary class="accordion-header">Models</summary>
@@ -93,12 +221,24 @@
               >
                 <div class="form-group">
                   <label>Model Name:</label>
-                  <input 
-                    type="text" 
-                    v-model="model.name" 
+                  <input
+                    type="text"
+                    v-model="model.name"
                     class="form-input"
                     placeholder="gpt-4"
                   />
+                  <small class="field-help">The actual model name used by the provider</small>
+                </div>
+
+                <div class="form-group">
+                  <label>Mapped Name (optional):</label>
+                  <input
+                    type="text"
+                    v-model="model.mappedName"
+                    class="form-input"
+                    placeholder="gpt-4"
+                  />
+                  <small class="field-help">The name clients will use in requests (defaults to model name if not provided)</small>
                 </div>
                 
                 <!-- Model Pricing -->
@@ -148,10 +288,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import type { AppConfig } from '../../../schemas/appConfig.schema';
 import { AppConfigSchema } from '../../../schemas/appConfig.schema';
-import type { Provider } from '../../../schemas/provider.schema';
+import type { Provider, ProviderType } from '../../../schemas/provider.schema';
+import { ProviderTypeSchema } from '../../../schemas/provider.schema';
 
 const config = ref<AppConfig>({ providers: [] });
 const isLoading = ref<boolean>(true);
@@ -161,6 +302,121 @@ const error = ref<string | null>(null);
 const isSaving = ref<boolean>(false);
 const saveMessage = ref<string>('');
 const saveMessageType = ref<'success' | 'error'>('success');
+
+// Provider type options derived from schema
+const providerTypeOptions = computed(() => {
+  return ProviderTypeSchema.options.map(type => ({
+    value: type,
+    label: getProviderDisplayName(type)
+  }));
+});
+
+// Helper function to get display names for provider types
+const getProviderDisplayName = (type: ProviderType): string => {
+  const displayNames: Record<ProviderType, string> = {
+    'openai': 'OpenAI',
+    'anthropic': 'Anthropic (Claude)',
+    'google': 'Google Generative AI',
+    'google-vertex': 'Google Vertex AI',
+    'azure': 'Azure OpenAI',
+    'bedrock': 'Amazon Bedrock',
+    'groq': 'Groq',
+    'mistral': 'Mistral AI',
+    'deepseek': 'DeepSeek',
+    'xai': 'xAI (Grok)',
+    'perplexity': 'Perplexity',
+    'togetherai': 'Together AI',
+    'openrouter': 'OpenRouter',
+    'ollama': 'Ollama',
+    'qwen': 'Qwen',
+    'openai-compatible': 'OpenAI Compatible',
+    'claude-code': 'Claude Code (VS Code)',
+    'gemini-cli': 'Gemini CLI',
+    'custom': 'Custom (Legacy)'
+  };
+  return displayNames[type] || type;
+};
+
+// Helper functions to determine which fields to show for each provider type
+const requiresApiKey = (type: ProviderType): boolean => {
+  const apiKeyRequired = [
+    'openai', 'anthropic', 'google', 'google-vertex', 'azure',
+    'groq', 'mistral', 'deepseek', 'xai', 'perplexity', 'togetherai',
+    'openrouter', 'qwen'
+  ];
+  return apiKeyRequired.includes(type);
+};
+
+const requiresBaseUrl = (type: ProviderType): boolean => {
+  const baseUrlRequired = ['openai-compatible', 'custom'];
+  const baseUrlOptional = ['openai', 'ollama'];
+  return baseUrlRequired.includes(type) || baseUrlOptional.includes(type);
+};
+
+const requiresAzureFields = (type: ProviderType): boolean => {
+  return type === 'azure';
+};
+
+const requiresBedrockFields = (type: ProviderType): boolean => {
+  return type === 'bedrock';
+};
+
+const requiresVertexFields = (type: ProviderType): boolean => {
+  return type === 'google-vertex';
+};
+
+const isBaseUrlRequired = (type: ProviderType): boolean => {
+  return ['openai-compatible', 'custom'].includes(type);
+};
+
+const isApiKeyRequired = (type: ProviderType): boolean => {
+  return requiresApiKey(type) || ['openai-compatible', 'custom'].includes(type);
+};
+
+// Helper functions for placeholders and help text
+const getApiKeyPlaceholder = (type: ProviderType): string => {
+  const placeholders: Partial<Record<ProviderType, string>> = {
+    'openai': 'sk-...',
+    'anthropic': 'sk-ant-...',
+    'google': 'Your Google AI API key',
+    'google-vertex': 'Your Google Cloud API key',
+    'azure': 'Your Azure OpenAI API key',
+    'groq': 'gsk_...',
+    'mistral': 'Your Mistral API key',
+    'deepseek': 'Your DeepSeek API key',
+    'xai': 'Your xAI API key',
+    'perplexity': 'pplx-...',
+    'togetherai': 'Your Together AI API key',
+    'openrouter': 'sk-or-v1-...',
+    'qwen': 'Your Qwen API key',
+    'openai-compatible': 'Your API key',
+    'custom': 'Your API key'
+  };
+  return placeholders[type] || 'Your API key';
+};
+
+const getBaseUrlPlaceholder = (type: ProviderType): string => {
+  const placeholders: Partial<Record<ProviderType, string>> = {
+    'openai': 'https://api.openai.com/v1',
+    'openrouter': 'https://openrouter.ai/api/v1',
+    'ollama': 'http://localhost:11434',
+    'openai-compatible': 'https://api.example.com/v1',
+    'custom': 'https://api.example.com/v1'
+  };
+  return placeholders[type] || 'https://api.example.com/v1';
+};
+
+const getProviderHelpText = (type: ProviderType): string => {
+  const helpTexts: Partial<Record<ProviderType, string>> = {
+    'gemini-cli': 'Uses OAuth authentication. Run "gemini auth" in your terminal first.',
+    'claude-code': 'Uses VS Code authentication. No additional configuration needed.',
+    'ollama': 'Make sure Ollama is running locally or provide a custom base URL.',
+    'google-vertex': 'Requires Google Cloud authentication and project setup.',
+    'azure': 'Requires Azure OpenAI service setup with resource and deployment.',
+    'bedrock': 'Requires AWS credentials with Bedrock access permissions.'
+  };
+  return helpTexts[type] || '';
+};
 
 onMounted(async () => {
   try {
@@ -428,6 +684,48 @@ const saveConfiguration = async (): Promise<void> => {
   font-weight: 500;
   color: var(--color-text);
   font-size: 14px;
+}
+
+.required {
+  color: #e74c3c;
+  margin-left: 2px;
+}
+
+.help-text {
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: var(--color-background-soft);
+  border-left: 3px solid var(--color-border);
+  border-radius: 4px;
+}
+
+.help-text small {
+  color: var(--color-text-secondary, #666);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.field-help {
+  color: var(--color-text-secondary, #666);
+  font-size: 11px;
+  margin-top: 4px;
+  display: block;
+}
+
+.provider-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.azure-fields,
+.bedrock-fields,
+.vertex-fields {
+  padding: 15px;
+  background: var(--color-background-soft);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  margin-top: 10px;
 }
 
 .form-input {

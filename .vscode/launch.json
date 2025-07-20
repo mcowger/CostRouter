@@ -30,11 +30,8 @@
       "showAsyncStacks": true,
       "runtimeExecutable": "pnpm",
       "runtimeArgs": [
-        "-w",
-        "-F",
-        "ui",
         "run",
-        "dev"
+        "dev:ui"
       ]
     }
   ],
