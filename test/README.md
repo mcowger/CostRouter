@@ -6,11 +6,12 @@ This directory contains comprehensive end-to-end tests for the LLM Gateway that 
 
 The E2E testing system includes:
 
-- **Mock LLM API Servers**: Simulate real provider endpoints (OpenAI, Anthropic)
+- **Mock LLM API Servers**: Simulate real provider endpoints (OpenRouter-compatible)
 - **Test Configuration**: Dedicated test config pointing to mock servers
 - **Complete Request Flow Testing**: Real HTTP requests to the running LLM Gateway
 - **Test Orchestration**: Automated startup/shutdown of all services
 - **Performance Testing**: Load testing and performance metrics
+- **AI SDK v4 Compatibility**: Updated for stable AI SDK v4 instead of beta v5
 
 ## Architecture
 
@@ -66,7 +67,8 @@ pnpm test:all
 - **Resource Usage**: Large payloads and many messages
 
 ### Mock Server (`test/mock-server/`)
-- **OpenAI API Simulation**: Compatible endpoints and responses
+- **OpenRouter API Simulation**: Compatible endpoints and responses
+- **Multiple Model Support**: GPT-4o, GPT-4o-mini, Claude models
 - **Streaming Support**: Proper SSE formatting
 - **Error Simulation**: Rate limits, auth errors, timeouts
 - **Control Endpoints**: Test scenario configuration
@@ -79,7 +81,7 @@ pnpm test:all
   "providers": [
     {
       "id": "mock-openai-primary",
-      "type": "openai",
+      "type": "openrouter",
       "baseURL": "http://localhost:3001/v1",
       "models": [...]
     }
@@ -88,9 +90,9 @@ pnpm test:all
 ```
 
 ### Mock Server Ports
-- **3001**: Mock OpenAI Primary
-- **3002**: Mock OpenAI Backup  
-- **3003**: Mock Anthropic
+- **3001**: Mock OpenRouter Primary
+- **3002**: Mock OpenRouter Backup
+- **3003**: Mock OpenRouter Anthropic
 - **3000**: LLM Gateway
 
 ## Test Scenarios

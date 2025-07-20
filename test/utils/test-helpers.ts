@@ -19,22 +19,36 @@ export interface ChatCompletionRequest {
 }
 
 export interface ChatCompletionResponse {
-  id: string;
-  object: string;
-  created: number;
-  model: string;
-  choices: Array<{
-    index: number;
-    message: {
-      role: string;
-      content: string;
-    };
-    finish_reason: string;
-  }>;
+  text: string;
+  finishReason: string;
   usage: {
-    prompt_tokens: number;
-    completion_tokens: number;
-    total_tokens: number;
+    promptTokens: number;
+    completionTokens: number;
+    totalTokens: number;
+  };
+  response: {
+    id: string;
+    modelId: string;
+    timestamp: string;
+    body: {
+      id: string;
+      object: string;
+      created: number;
+      model: string;
+      choices: Array<{
+        index: number;
+        message: {
+          role: string;
+          content: string;
+        };
+        finish_reason: string;
+      }>;
+      usage: {
+        prompt_tokens: number;
+        completion_tokens: number;
+        total_tokens: number;
+      };
+    };
   };
 }
 
@@ -77,40 +91,14 @@ export class TestHelpers {
   }
 
   /**
-   * Parse streaming response chunks
+   * Parse streaming response (AI SDK v4 returns plain text)
    */
   parseStreamingResponse(responseText: string) {
-    const chunks = responseText
-      .split('\n\n')
-      .filter(chunk => chunk.startsWith('data: '))
-      .map(chunk => chunk.replace('data: ', ''));
-
-    const jsonChunks = chunks
-      .filter(chunk => chunk !== '[DONE]')
-      .map(chunk => {
-        try {
-          return JSON.parse(chunk);
-        } catch (error) {
-          console.warn('Failed to parse chunk:', chunk);
-          return null;
-        }
-      })
-      .filter(chunk => chunk !== null);
-
     return {
-      chunks: jsonChunks,
-      isDone: chunks.includes('[DONE]'),
-      fullContent: this.extractContentFromChunks(jsonChunks)
+      fullContent: responseText,
+      isDone: true, // AI SDK v4 streaming completes when response is received
+      isValid: responseText && responseText.length > 0
     };
-  }
-
-  /**
-   * Extract full content from streaming chunks
-   */
-  private extractContentFromChunks(chunks: any[]): string {
-    return chunks
-      .map(chunk => chunk.choices?.[0]?.delta?.content || '')
-      .join('');
   }
 
   /**
@@ -195,40 +183,28 @@ export class TestHelpers {
   }
 
   /**
-   * Validate OpenAI API response format
+   * Validate AI SDK v4 response format
    */
   validateChatCompletionResponse(response: any): response is ChatCompletionResponse {
     return (
       typeof response === 'object' &&
-      typeof response.id === 'string' &&
-      response.object === 'chat.completion' &&
-      typeof response.created === 'number' &&
-      typeof response.model === 'string' &&
-      Array.isArray(response.choices) &&
-      response.choices.length > 0 &&
-      typeof response.choices[0].message === 'object' &&
-      typeof response.choices[0].message.role === 'string' &&
-      typeof response.choices[0].message.content === 'string' &&
+      typeof response.text === 'string' &&
+      typeof response.finishReason === 'string' &&
       typeof response.usage === 'object' &&
-      typeof response.usage.prompt_tokens === 'number' &&
-      typeof response.usage.completion_tokens === 'number' &&
-      typeof response.usage.total_tokens === 'number'
+      typeof response.usage.promptTokens === 'number' &&
+      typeof response.usage.completionTokens === 'number' &&
+      typeof response.usage.totalTokens === 'number' &&
+      typeof response.response === 'object' &&
+      typeof response.response.body === 'object' &&
+      typeof response.response.body.model === 'string'
     );
   }
 
   /**
-   * Validate streaming chunk format
+   * Validate streaming response format (AI SDK v4)
    */
-  validateStreamingChunk(chunk: any): boolean {
-    return (
-      typeof chunk === 'object' &&
-      typeof chunk.id === 'string' &&
-      chunk.object === 'chat.completion.chunk' &&
-      typeof chunk.created === 'number' &&
-      typeof chunk.model === 'string' &&
-      Array.isArray(chunk.choices) &&
-      chunk.choices.length > 0
-    );
+  validateStreamingResponse(responseText: string): boolean {
+    return typeof responseText === 'string' && responseText.length > 0;
   }
 
   /**

@@ -5,7 +5,7 @@ async function main() {
     "http://localhost:3000/v1/chat/completions",
     {
       //model: "gpt-4o",
-      model: "moonshotai/kimi-k2:free",
+      model: "gemini-2.5-flash",
       // model: "nonexistent-model",
       messages: [{ role: "user", content: "are you gpt-4o or gpt-4.1?" }],
       stream: false,
@@ -16,9 +16,10 @@ async function main() {
       },
     },
   );
-
-  console.log(`Response: ${response.data.text.slice(0, 1000)}...`);
-  console.log("Usage:", response.data.usage);
+  console.log(`Response:`, JSON.stringify(response.data.text, null, 2));
+  console.log(`Response:`, JSON.stringify(response.data.providerMetadata, null, 2));
+  // console.log(`Response: ${response.data.text.slice(0, 1000)}...`);
+  // console.log("Usage:", response.data.usage);
 }
 
 main().catch(console.error);

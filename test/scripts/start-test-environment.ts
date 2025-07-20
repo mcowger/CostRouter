@@ -31,13 +31,11 @@ class TestEnvironment {
       console.log('\n✅ Test environment is ready!');
       console.log('\n📋 Available endpoints:');
       console.log('  • LLM Gateway: http://localhost:3000');
-      console.log('  • Mock OpenAI Primary: http://localhost:3001');
-      console.log('  • Mock OpenAI Backup: http://localhost:3002');
-      console.log('  • Mock Anthropic: http://localhost:3003');
+      console.log('  • Mock Server: http://localhost:3001');
       console.log('\n🧪 Test the gateway:');
       console.log('  curl -X POST http://localhost:3000/v1/chat/completions \\');
       console.log('    -H "Content-Type: application/json" \\');
-      console.log('    -d \'{"model":"gpt-3.5-turbo","messages":[{"role":"user","content":"Hello!"}]}\'');
+      console.log('    -d \'{"model":"gpt-4o","messages":[{"role":"user","content":"Hello!"}]}\'');
       console.log('\nPress Ctrl+C to stop all services');
 
       // Keep running until interrupted
@@ -53,39 +51,32 @@ class TestEnvironment {
   private async startMockServers() {
     console.log('🎭 Starting mock servers...');
 
-    const mockServerConfigs = [
-      { port: 3001, name: 'OpenAI Primary' },
-      { port: 3002, name: 'OpenAI Backup' },
-      { port: 3003, name: 'Anthropic' }
-    ];
+    const mockProcess = spawn('tsx', ['test/mock-server/start-mock-server.ts'], {
+      env: { ...process.env, MOCK_SERVER_PORT: '3001' },
+      stdio: ['pipe', 'pipe', 'pipe']
+    });
 
-    for (const config of mockServerConfigs) {
-      const mockProcess = spawn('tsx', ['test/mock-server/start-mock-server.ts'], {
-        env: { ...process.env, MOCK_SERVER_PORT: config.port.toString() },
-        stdio: ['pipe', 'pipe', 'pipe']
-      });
+    this.processes.push({
+      name: 'Mock Server',
+      process: mockProcess,
+      port: 3001
+    });
 
-      this.processes.push({
-        name: `Mock ${config.name}`,
-        process: mockProcess,
-        port: config.port
-      });
+    // Log output
+    mockProcess.stdout?.on('data', (data) => {
+      console.log(`[Mock Server] ${data.toString().trim()}`);
+    });
 
-      // Log output
-      mockProcess.stdout?.on('data', (data) => {
-        console.log(`[${config.name}] ${data.toString().trim()}`);
-      });
+    mockProcess.stderr?.on('data', (data) => {
+      console.error(`[Mock Server Error] ${data.toString().trim()}`);
+    });
 
-      mockProcess.stderr?.on('data', (data) => {
-        console.error(`[${config.name} Error] ${data.toString().trim()}`);
-      });
+    mockProcess.on('exit', (code) => {
+      if (code !== 0) {
+        console.error(`Mock server exited with code ${code}`);
+      }
+    });
 
-      mockProcess.on('exit', (code) => {
-        if (code !== 0) {
-          console.error(`${config.name} exited with code ${code}`);
-        }
-      });
-    }
 
     await this.sleep(2000);
   }
@@ -133,9 +124,7 @@ class TestEnvironment {
     console.log('⏳ Waiting for services to be ready...');
 
     const services = [
-      { name: 'Mock OpenAI Primary', url: 'http://localhost:3001/health' },
-      { name: 'Mock OpenAI Backup', url: 'http://localhost:3002/health' },
-      { name: 'Mock Anthropic', url: 'http://localhost:3003/health' },
+      { name: 'Mock Server', url: 'http://localhost:3001/health' },
       { name: 'LLM Gateway', url: 'http://localhost:3000/health' }
     ];
 

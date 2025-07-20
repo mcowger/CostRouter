@@ -16,7 +16,7 @@ import { createAnthropic } from "@ai-sdk/anthropic";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createVertex } from "@ai-sdk/google-vertex";
 //import { createAzure } from "@ai-sdk/azure"; // Commented out until wI figure out the resourceName
-import { createAmazonBedrock } from "@ai-sdk/amazon-bedrock"; // Commented out until we verify API
+//import { createAmazonBedrock } from "@ai-sdk/amazon-bedrock"; // Commented out until we verify API
 import { createGroq } from "@ai-sdk/groq";
 import { createMistral } from "@ai-sdk/mistral";
 import { createDeepSeek } from "@ai-sdk/deepseek";
@@ -24,8 +24,9 @@ import { createXai } from "@ai-sdk/xai";
 import { createPerplexity } from "@ai-sdk/perplexity";
 import { createTogetherAI } from "@ai-sdk/togetherai";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
-// Third-party providers - commented out until we verify their APIs
-import { createOpenRouter } from '@openrouter/ai-sdk-provider';
+
+// import { createOpenRouter } from '@openrouter/ai-sdk-provider'; Only supports v5, 
+// which nothing else does.  For now, treat it as openai-compatible
 import { createOllama } from "ollama-ai-provider";
 import { createQwen } from "qwen-ai-provider";
 
@@ -92,11 +93,13 @@ export class UnifiedExecutor {
       baseURL: config.baseURL || "http://localhost:11434",
     })],
 
-    // OpenAI-compatible providers
-    ["openrouter", (config) => createOpenRouter({
+    // OpenRouter - use compatible for now because their provider only supports v5.
+    ["openrouter", (config) => createOpenAICompatible({
+      name: config.id,
       apiKey: config.apiKey!,
+      baseURL: config.baseURL || "https://api.openrouter.ai/api/v1",
     })],
-    
+
     // OpenAI-compatible providers
     ["openai-compatible", (config) => createOpenAICompatible({
       name: config.id,
@@ -150,13 +153,13 @@ export class UnifiedExecutor {
    */
   private getOrCreateProvider(config: Provider): any {
     const cacheKey = `${config.type}-${config.id}`;
-    
+
     if (!this.providerInstances.has(cacheKey)) {
       logger.debug(`Creating new provider instance for ${config.type}:${config.id}`);
       const instance = this.createProviderInstance(config);
       this.providerInstances.set(cacheKey, instance);
     }
-    
+
     return this.providerInstances.get(cacheKey);
   }
 
@@ -166,22 +169,22 @@ export class UnifiedExecutor {
   public async execute(req: Request, res: Response): Promise<void> {
     const chosenProvider = res.locals.chosenProvider as Provider;
     const chosenModel = res.locals.chosenModel as Model;
-    
+
     logger.debug(
-      { provider: chosenProvider, model: chosenModel }, 
+      { provider: chosenProvider, model: chosenModel },
       `Executing request with ${chosenProvider.type} provider`
     );
 
     try {
       // Get or create the AI SDK provider instance
       const providerInstance = this.getOrCreateProvider(chosenProvider);
-      
+
       // Create the model using the provider
       const model = providerInstance(chosenModel.name);
-      
+
       // Extract request data
       const { messages, stream = false } = req.body;
-      
+
       // Execute the request using AI SDK
       if (stream) {
         const result = streamText({ model: model as any, messages });

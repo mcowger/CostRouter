@@ -126,13 +126,25 @@ class MockLLMServer {
             id: 'gpt-4o',
             object: 'model',
             created: 1715367049,
-            owned_by: 'system'
+            owned_by: 'openai'
           },
           {
             id: 'gpt-4o-mini',
             object: 'model',
             created: 1721172741,
-            owned_by: 'system'
+            owned_by: 'openai'
+          },
+          {
+            id: 'gpt-4-turbo',
+            object: 'model',
+            created: 1712361441,
+            owned_by: 'openai'
+          },
+          {
+            id: 'gpt-3.5-turbo',
+            object: 'model',
+            created: 1677610602,
+            owned_by: 'openai'
           },
           {
             id: 'claude-3-5-sonnet-20241022',
@@ -209,12 +221,16 @@ class MockLLMServer {
       });
     }
 
-    // Check if model is supported
+    // Check if model is supported (OpenRouter supports many models)
     const supportedModels = [
       'gpt-4o',
       'gpt-4o-mini',
+      'gpt-4-turbo',
+      'gpt-3.5-turbo',
       'claude-3-5-sonnet-20241022',
-      'claude-3-5-haiku-20241022'
+      'claude-3-5-haiku-20241022',
+      'claude-3-sonnet',
+      'claude-3-haiku'
     ];
     if (!supportedModels.includes(requestBody.model)) {
       return res.status(404).json({

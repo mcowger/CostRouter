@@ -1,3 +1,13 @@
 {
-  "records": []
+  "records": [
+    {
+      "timestamp": "2025-07-20T03:54:29.131Z",
+      "providerId": "mock-openai-primary",
+      "model": "gpt-4o",
+      "promptTokens": 5,
+      "completionTokens": 15,
+      "totalTokens": 20,
+      "cost": 0.1625
+    }
+  ]
 }

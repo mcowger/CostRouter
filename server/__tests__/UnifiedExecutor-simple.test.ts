@@ -23,7 +23,7 @@ jest.mock('@ai-sdk/google', () => ({
   createGoogleGenerativeAI: jest.fn()
 }));
 
-// Mock all the provider modules to avoid import issues
+// Mock all the provider modules to avoid import issues (AI SDK v4 compatible)
 jest.mock('@ai-sdk/google-vertex', () => ({ createVertex: jest.fn() }));
 jest.mock('@ai-sdk/amazon-bedrock', () => ({ createAmazonBedrock: jest.fn() }));
 jest.mock('@ai-sdk/groq', () => ({ createGroq: jest.fn() }));
@@ -33,7 +33,7 @@ jest.mock('@ai-sdk/xai', () => ({ createXai: jest.fn() }));
 jest.mock('@ai-sdk/perplexity', () => ({ createPerplexity: jest.fn() }));
 jest.mock('@ai-sdk/togetherai', () => ({ createTogetherAI: jest.fn() }));
 jest.mock('@ai-sdk/openai-compatible', () => ({ createOpenAICompatible: jest.fn() }));
-jest.mock('@openrouter/ai-sdk-provider', () => ({ createOpenRouter: jest.fn() }));
+jest.mock('@openrouter/ai-sdk-provider', () => ({ openrouter: jest.fn() }));
 jest.mock('ollama-ai-provider', () => ({ createOllama: jest.fn() }));
 jest.mock('qwen-ai-provider', () => ({ createQwen: jest.fn() }));
 
