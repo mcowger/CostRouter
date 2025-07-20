@@ -29,9 +29,10 @@ jest.mock('@ai-sdk/xai', () => ({ createXai: jest.fn() }));
 jest.mock('@ai-sdk/perplexity', () => ({ createPerplexity: jest.fn() }));
 jest.mock('@ai-sdk/togetherai', () => ({ createTogetherAI: jest.fn() }));
 jest.mock('@ai-sdk/openai-compatible', () => ({ createOpenAICompatible: jest.fn() }));
-jest.mock('@openrouter/ai-sdk-provider', () => ({ openrouter: jest.fn() }));
 jest.mock('ollama-ai-provider', () => ({ createOllama: jest.fn() }));
 jest.mock('qwen-ai-provider', () => ({ createQwen: jest.fn() }));
+jest.mock('ai-sdk-provider-gemini-cli', () => ({ createGeminiProvider: jest.fn() }));
+jest.mock('ai-sdk-provider-claude-code', () => ({ createClaudeCode: jest.fn() }));
 
 jest.mock('../components/Logger.js', () => ({
   logger: {
@@ -127,7 +128,11 @@ describe('Streaming Tests', () => {
       const mockStreamResult = {
         usage: Promise.resolve(mockUsage),
         finishReason: Promise.resolve('stop'),
-        pipeTextStreamToResponse: jest.fn()
+        textStream: (async function* () {
+          yield 'Hello';
+          yield ' world';
+          yield '!';
+        })()
       };
 
       (streamText as jest.MockedFunction<typeof streamText>).mockReturnValue(mockStreamResult as any);
@@ -147,7 +152,11 @@ describe('Streaming Tests', () => {
         messages: req.body.messages
       });
 
-      expect(mockStreamResult.pipeTextStreamToResponse).toHaveBeenCalledWith(res);
+      // For streaming, expect writeHead to be called to set up SSE headers
+      expect(res.writeHead).toHaveBeenCalledWith(200, expect.objectContaining({
+        'Content-Type': 'text/plain; charset=utf-8',
+        'Transfer-Encoding': 'chunked'
+      }));
     });
 
     it('should track usage after streaming completion', async () => {
@@ -158,7 +167,11 @@ describe('Streaming Tests', () => {
       const mockStreamResult = {
         usage: Promise.resolve(mockUsage),
         finishReason: Promise.resolve('stop'),
-        pipeTextStreamToResponse: jest.fn()
+        textStream: (async function* () {
+          yield 'Hello';
+          yield ' world';
+          yield '!';
+        })()
       };
 
       (streamText as jest.MockedFunction<typeof streamText>).mockReturnValue(mockStreamResult as any);
@@ -173,8 +186,10 @@ describe('Streaming Tests', () => {
 
       await executor.execute(req as any, res as any);
 
-      // Wait for the usage promise to resolve
+      // Wait for the usage promise to resolve and give time for async usage tracking
       await mockStreamResult.usage;
+      // Add a small delay to allow the async usage tracking to complete
+      await new Promise(resolve => setTimeout(resolve, 10));
 
       expect(mockUsageManager.consume).toHaveBeenCalledWith(
         'test-provider',
@@ -195,7 +210,11 @@ describe('Streaming Tests', () => {
       const mockStreamResult = {
         usage: Promise.resolve(mockUsage),
         finishReason: Promise.resolve('stop'),
-        pipeTextStreamToResponse: jest.fn()
+        textStream: (async function* () {
+          yield 'Hello';
+          yield ' world';
+          yield '!';
+        })()
       };
 
       (streamText as jest.MockedFunction<typeof streamText>).mockReturnValue(mockStreamResult as any);
@@ -225,8 +244,10 @@ describe('Streaming Tests', () => {
 
       await executor.execute(req as any, res as any);
 
-      // Wait for usage tracking
+      // Wait for usage tracking and give time for async usage tracking
       await mockStreamResult.usage;
+      // Add a small delay to allow the async usage tracking to complete
+      await new Promise(resolve => setTimeout(resolve, 10));
 
       // In test environment, PriceData.getInstance() may fail, so cost falls back to 0
       // This is expected behavior - the pricing override logic is working correctly
@@ -272,7 +293,10 @@ describe('Streaming Tests', () => {
       const mockStreamResult = {
         usage: Promise.reject(new Error('Usage tracking failed')),
         finishReason: Promise.resolve('stop'),
-        pipeTextStreamToResponse: jest.fn()
+        textStream: (async function* () {
+          yield 'Hello';
+          yield ' world';
+        })()
       };
 
       (streamText as jest.MockedFunction<typeof streamText>).mockReturnValue(mockStreamResult as any);
@@ -287,8 +311,11 @@ describe('Streaming Tests', () => {
 
       await executor.execute(req as any, res as any);
 
-      // Should still pipe the stream even if usage tracking fails
-      expect(mockStreamResult.pipeTextStreamToResponse).toHaveBeenCalledWith(res);
+      // Should still set up streaming headers even if usage tracking fails
+      expect(res.writeHead).toHaveBeenCalledWith(200, expect.objectContaining({
+        'Content-Type': 'text/plain; charset=utf-8',
+        'Transfer-Encoding': 'chunked'
+      }));
 
       // Wait for usage promise to be handled
       try {
@@ -309,7 +336,10 @@ describe('Streaming Tests', () => {
       const mockStreamResult = {
         usage: Promise.resolve(mockUsage),
         finishReason: Promise.resolve('interrupted'),
-        pipeTextStreamToResponse: jest.fn()
+        textStream: (async function* () {
+          yield 'Hello';
+          yield ' world';
+        })()
       };
 
       (streamText as jest.MockedFunction<typeof streamText>).mockReturnValue(mockStreamResult as any);
@@ -324,10 +354,16 @@ describe('Streaming Tests', () => {
 
       await executor.execute(req as any, res as any);
 
-      expect(mockStreamResult.pipeTextStreamToResponse).toHaveBeenCalledWith(res);
+      // Should set up streaming headers even if interrupted
+      expect(res.writeHead).toHaveBeenCalledWith(200, expect.objectContaining({
+        'Content-Type': 'text/plain; charset=utf-8',
+        'Transfer-Encoding': 'chunked'
+      }));
 
       // Should still track usage even if interrupted
       await mockStreamResult.usage;
+      // Add a small delay to allow the async usage tracking to complete
+      await new Promise(resolve => setTimeout(resolve, 10));
       expect(mockUsageManager.consume).toHaveBeenCalled();
     });
   });
@@ -437,7 +473,10 @@ describe('Streaming Tests', () => {
       const mockStreamResult = {
         usage: Promise.resolve(v2Usage),
         finishReason: Promise.resolve('stop'),
-        pipeTextStreamToResponse: jest.fn()
+        textStream: (async function* () {
+          yield 'Hello';
+          yield ' world';
+        })()
       };
 
       (streamText as jest.MockedFunction<typeof streamText>).mockReturnValue(mockStreamResult as any);
@@ -453,6 +492,8 @@ describe('Streaming Tests', () => {
       await executor.execute(req as any, res as any);
 
       await mockStreamResult.usage;
+      // Add a small delay to allow the async usage tracking to complete
+      await new Promise(resolve => setTimeout(resolve, 10));
 
       expect(mockUsageManager.consume).toHaveBeenCalledWith(
         'test-provider',

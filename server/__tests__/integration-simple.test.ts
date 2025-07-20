@@ -30,9 +30,10 @@ jest.mock('@ai-sdk/xai', () => ({ createXai: jest.fn() }));
 jest.mock('@ai-sdk/perplexity', () => ({ createPerplexity: jest.fn() }));
 jest.mock('@ai-sdk/togetherai', () => ({ createTogetherAI: jest.fn() }));
 jest.mock('@ai-sdk/openai-compatible', () => ({ createOpenAICompatible: jest.fn() }));
-jest.mock('@openrouter/ai-sdk-provider', () => ({ openrouter: jest.fn() }));
 jest.mock('ollama-ai-provider', () => ({ createOllama: jest.fn() }));
 jest.mock('qwen-ai-provider', () => ({ createQwen: jest.fn() }));
+jest.mock('ai-sdk-provider-gemini-cli', () => ({ createGeminiProvider: jest.fn() }));
+jest.mock('ai-sdk-provider-claude-code', () => ({ createClaudeCode: jest.fn() }));
 
 jest.mock('../components/ConfigManager.js', () => ({
   ConfigManager: {
@@ -122,7 +123,11 @@ describe('Integration Tests - Complete Request Flow', () => {
   const mockStreamTextResult = {
     usage: Promise.resolve(mockUsage),
     finishReason: Promise.resolve('stop'),
-    pipeTextStreamToResponse: jest.fn()
+    textStream: (async function* () {
+      yield 'Hello';
+      yield ' world';
+      yield '!';
+    })()
   };
 
   // Mock Express objects
@@ -139,6 +144,9 @@ describe('Integration Tests - Complete Request Flow', () => {
   const createMockResponse = (overrides: any = {}) => ({
     status: jest.fn().mockReturnThis(),
     json: jest.fn().mockReturnThis(),
+    write: jest.fn().mockReturnThis(),
+    end: jest.fn().mockReturnThis(),
+    writeHead: jest.fn().mockReturnThis(),
     locals: {},
     ...overrides
   });
@@ -194,8 +202,11 @@ describe('Integration Tests - Complete Request Flow', () => {
     await router.chooseProvider(req as any, res as any, next);
 
     expect(next).toHaveBeenCalled();
-    expect(res.locals.chosenProvider).toEqual(mockProviders[0]);
-    expect(res.locals.chosenModel).toEqual(mockProviders[0].models[0]);
+    // Router now uses random selection, so just verify a valid provider was chosen
+    expect(res.locals.chosenProvider).toBeDefined();
+    expect(res.locals.chosenModel).toBeDefined();
+    expect(res.locals.chosenProvider.type).toBe('openai');
+    expect(res.locals.chosenModel.name).toBe('gpt-3.5-turbo');
 
     // Step 2: Executor processes request
     await executor.execute(req as any, res as any);
@@ -205,9 +216,30 @@ describe('Integration Tests - Complete Request Flow', () => {
       messages: req.body.messages
     });
 
-    expect(res.json).toHaveBeenCalledWith(mockGenerateTextResult);
+    // Expect OpenAI API format response
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+      id: expect.stringMatching(/^chatcmpl-/),
+      object: "chat.completion",
+      created: expect.any(Number),
+      model: "gpt-3.5-turbo",
+      choices: [{
+        index: 0,
+        message: {
+          role: "assistant",
+          content: "This is a mock response from the AI model.",
+          refusal: null
+        },
+        finish_reason: "stop",
+        logprobs: null
+      }],
+      usage: {
+        prompt_tokens: 100,
+        completion_tokens: 50,
+        total_tokens: 150
+      }
+    }));
     expect(mockUsageManager.consume).toHaveBeenCalledWith(
-      'openai-primary',
+      expect.any(String), // Provider ID (now random)
       'gpt-3.5-turbo',
       expect.any(Object),
       expect.any(Number)
@@ -259,7 +291,11 @@ describe('Integration Tests - Complete Request Flow', () => {
       model: expect.any(Object),
       messages: req.body.messages
     });
-    expect(mockStreamTextResult.pipeTextStreamToResponse).toHaveBeenCalledWith(res);
+    // For streaming, expect writeHead to be called to set up SSE headers
+    expect(res.writeHead).toHaveBeenCalledWith(200, expect.objectContaining({
+      'Content-Type': 'text/plain; charset=utf-8',
+      'Transfer-Encoding': 'chunked'
+    }));
   });
 
   it('should handle provider failover correctly', async () => {

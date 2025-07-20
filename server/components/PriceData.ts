@@ -163,44 +163,48 @@ export class PriceData {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
 
-      const response = await fetch('https://www.helicone.ai/api/llm-costs', {
-        signal: controller.signal,
-        headers: {
-          'Accept': 'application/json',
-        }
-      });
-
-      clearTimeout(timeoutId);
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const data: HeliconeResponse = await response.json();
-
-      if (!data.data || !Array.isArray(data.data)) {
-        throw new Error("Invalid response format: missing or invalid data array");
-      }
-
-      // Process and organize the data by provider
-      let processedCount = 0;
-      let skippedCount = 0;
-
-      for (const model of data.data) {
-        const mappedProvider = this.mapHeliconeProviderToSchema(model.provider);
-        if (mappedProvider) {
-          if (!this.pricingData.has(mappedProvider)) {
-            this.pricingData.set(mappedProvider, []);
+      try {
+        const response = await fetch('https://www.helicone.ai/api/llm-costs', {
+          signal: controller.signal,
+          headers: {
+            'Accept': 'application/json',
           }
-          this.pricingData.get(mappedProvider)!.push(model);
-          processedCount++;
-        } else {
-          skippedCount++;
-        }
-      }
+        });
 
-      logger.info(`Pricing data loaded: ${processedCount} models processed, ${skippedCount} skipped from unmapped providers`);
-      this.isInitialized = true;
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const data: HeliconeResponse = await response.json();
+
+        if (!data.data || !Array.isArray(data.data)) {
+          throw new Error("Invalid response format: missing or invalid data array");
+        }
+
+        // Process and organize the data by provider
+        let processedCount = 0;
+        let skippedCount = 0;
+
+        for (const model of data.data) {
+          const mappedProvider = this.mapHeliconeProviderToSchema(model.provider);
+          if (mappedProvider) {
+            if (!this.pricingData.has(mappedProvider)) {
+              this.pricingData.set(mappedProvider, []);
+            }
+            this.pricingData.get(mappedProvider)!.push(model);
+            processedCount++;
+          } else {
+            skippedCount++;
+          }
+        }
+
+        logger.info(`Pricing data loaded: ${processedCount} models processed, ${skippedCount} skipped from unmapped providers`);
+        this.isInitialized = true;
+
+      } finally {
+        // Always clear the timeout to prevent Jest from hanging
+        clearTimeout(timeoutId);
+      }
 
     } catch (error) {
       logger.error(`Failed to fetch pricing data from Helicone API: ${getErrorMessage(error)}`);

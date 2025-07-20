@@ -112,7 +112,7 @@ describe('Router - Basic Tests', () => {
     expect(typeof router.chooseProvider).toBe('function');
   });
 
-  it('should select first available provider for requested model', async () => {
+  it('should select an available provider for requested model', async () => {
     const { ConfigManager } = await import('../components/ConfigManager.js');
     const { UsageManager } = await import('../components/UsageManager.js');
     const { Router } = await import('../components/Router.js');
@@ -133,8 +133,12 @@ describe('Router - Basic Tests', () => {
 
     await router.chooseProvider(req as any, res as any, next);
 
-    expect(res.locals.chosenProvider).toEqual(mockProviders[0]);
-    expect(res.locals.chosenModel).toEqual(mockProviders[0].models[0]);
+    // Router now uses random selection, so we should check that a valid provider was selected
+    // that supports the requested model
+    expect(res.locals.chosenProvider).toBeDefined();
+    expect(res.locals.chosenModel).toBeDefined();
+    expect(res.locals.chosenProvider.type).toBe('openai'); // Both providers that support gpt-3.5-turbo are openai type
+    expect(res.locals.chosenModel.name).toBe('gpt-3.5-turbo');
     expect(next).toHaveBeenCalled();
   });
 

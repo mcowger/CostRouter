@@ -27,9 +27,10 @@ jest.mock('@ai-sdk/xai', () => ({ createXai: jest.fn() }));
 jest.mock('@ai-sdk/perplexity', () => ({ createPerplexity: jest.fn() }));
 jest.mock('@ai-sdk/togetherai', () => ({ createTogetherAI: jest.fn() }));
 jest.mock('@ai-sdk/openai-compatible', () => ({ createOpenAICompatible: jest.fn() }));
-jest.mock('@openrouter/ai-sdk-provider', () => ({ openrouter: jest.fn() }));
 jest.mock('ollama-ai-provider', () => ({ createOllama: jest.fn() }));
 jest.mock('qwen-ai-provider', () => ({ createQwen: jest.fn() }));
+jest.mock('ai-sdk-provider-gemini-cli', () => ({ createGeminiProvider: jest.fn() }));
+jest.mock('ai-sdk-provider-claude-code', () => ({ createClaudeCode: jest.fn() }));
 
 jest.mock('../components/Logger.js', () => ({
   logger: {
@@ -320,7 +321,28 @@ describe('Error Scenarios and Edge Cases', () => {
 
       await executor.execute(req as any, res as any);
 
-      expect(res.json).toHaveBeenCalledWith(mockResult);
+      // Expect OpenAI API format response
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+        id: expect.stringMatching(/^chatcmpl-/),
+        object: "chat.completion",
+        created: expect.any(Number),
+        model: "gpt-3.5-turbo",
+        choices: [{
+          index: 0,
+          message: {
+            role: "assistant",
+            content: "Response",
+            refusal: null
+          },
+          finish_reason: undefined, // finishReason not provided in mockResult
+          logprobs: null
+        }],
+        usage: {
+          prompt_tokens: 100,
+          completion_tokens: 50,
+          total_tokens: 150
+        }
+      }));
       expect(mockUsageManager.consume).toHaveBeenCalled();
     });
   });

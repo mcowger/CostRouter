@@ -33,9 +33,10 @@ jest.mock('@ai-sdk/xai', () => ({ createXai: jest.fn() }));
 jest.mock('@ai-sdk/perplexity', () => ({ createPerplexity: jest.fn() }));
 jest.mock('@ai-sdk/togetherai', () => ({ createTogetherAI: jest.fn() }));
 jest.mock('@ai-sdk/openai-compatible', () => ({ createOpenAICompatible: jest.fn() }));
-jest.mock('@openrouter/ai-sdk-provider', () => ({ openrouter: jest.fn() }));
 jest.mock('ollama-ai-provider', () => ({ createOllama: jest.fn() }));
 jest.mock('qwen-ai-provider', () => ({ createQwen: jest.fn() }));
+jest.mock('ai-sdk-provider-gemini-cli', () => ({ createGeminiProvider: jest.fn() }));
+jest.mock('ai-sdk-provider-claude-code', () => ({ createClaudeCode: jest.fn() }));
 
 // Mock the logger to avoid import issues
 jest.mock('../components/Logger.js', () => ({
@@ -92,7 +93,11 @@ describe('UnifiedExecutor - Basic Tests', () => {
   const mockStreamTextResult = {
     usage: Promise.resolve(mockUsage),
     finishReason: Promise.resolve('stop'),
-    pipeTextStreamToResponse: jest.fn()
+    textStream: (async function* () {
+      yield 'Hello';
+      yield ' world';
+      yield '!';
+    })()
   };
 
   // Mock UsageManager
@@ -116,6 +121,9 @@ describe('UnifiedExecutor - Basic Tests', () => {
   const createMockResponse = (overrides: any = {}) => ({
     status: jest.fn().mockReturnThis(),
     json: jest.fn().mockReturnThis(),
+    write: jest.fn().mockReturnThis(),
+    end: jest.fn().mockReturnThis(),
+    writeHead: jest.fn().mockReturnThis(),
     locals: {
       chosenProvider: {
         id: 'test-provider',
@@ -181,7 +189,29 @@ describe('UnifiedExecutor - Basic Tests', () => {
 
     expect(generateText).toHaveBeenCalled();
     expect(mockUsageManager.consume).toHaveBeenCalled();
-    expect(res.json).toHaveBeenCalledWith(mockGenerateTextResult);
+
+    // Expect OpenAI API format response
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+      id: expect.stringMatching(/^chatcmpl-/),
+      object: "chat.completion",
+      created: expect.any(Number),
+      model: "gpt-3.5-turbo",
+      choices: [{
+        index: 0,
+        message: {
+          role: "assistant",
+          content: "This is a mock response from the AI model.",
+          refusal: null
+        },
+        finish_reason: "stop",
+        logprobs: null
+      }],
+      usage: {
+        prompt_tokens: 100,
+        completion_tokens: 50,
+        total_tokens: 150
+      }
+    }));
   });
 
   it('should handle errors gracefully', async () => {
@@ -220,7 +250,11 @@ describe('UnifiedExecutor - Basic Tests', () => {
     await executor.execute(req as any, res as any);
 
     expect(streamText).toHaveBeenCalled();
-    expect(mockStreamTextResult.pipeTextStreamToResponse).toHaveBeenCalledWith(res);
+    // For streaming, expect writeHead to be called to set up SSE headers
+    expect(res.writeHead).toHaveBeenCalledWith(200, expect.objectContaining({
+      'Content-Type': 'text/plain; charset=utf-8',
+      'Transfer-Encoding': 'chunked'
+    }));
   });
 
   it('should clear cache correctly', async () => {
