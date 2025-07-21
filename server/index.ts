@@ -3,7 +3,6 @@ import cors from "cors";
 import yargs from "yargs/yargs";
 import { hideBin } from "yargs/helpers";
 import path from 'path';
-import { fileURLToPath } from 'url';
 import { ConfigManager } from "./components/ConfigManager.js";
 import { PriceData } from "./components/PriceData.js";
 import { Router } from "./components/Router.js";
@@ -221,22 +220,24 @@ async function main() {
   });
 
   // --- Static UI Serving (after API routes) ---
-  const __filename = fileURLToPath(import.meta.url);
-  const __dirname = path.dirname(__filename);
 
-  // Dynamic path detection for dev vs production
-  // In dev: __dirname is server/, so we need ../ui/dist
-  // In prod: __dirname is dist/server/, so we need ../../ui/dist
-  const isDevelopment = __dirname.endsWith('server');
-  const uiBuildPath = isDevelopment 
-    ? path.join(__dirname, '../ui/dist')
-    : path.join(__dirname, '../../ui/dist');
+  // Use process.cwd() to reliably get the project root directory.
+  const projectRoot = process.cwd();
 
-  app.use(express.static(uiBuildPath));
+  // The path to the compiled UI is now consistently in `dist/ui`.
+  const uiPath = path.join(projectRoot, 'dist', 'ui');
 
-  // Catch-all handler: send back React's index.html file for any non-API routes
+  // Serve all static files from the correct build directory.
+  app.use(express.static(uiPath));
+
+  // For any non-API request, send the main index.html file to support the SPA.
   app.get('*', (_req, res) => {
-    res.sendFile(path.join(uiBuildPath, 'index.html'));
+    // Use a try-catch block for graceful error handling if the file is missing.
+    try {
+      res.sendFile(path.join(uiPath, 'index.html'));
+    } catch (err) {
+      res.status(404).send('UI not found. Please run the build process.');
+    }
   });
 
 

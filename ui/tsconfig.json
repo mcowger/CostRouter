@@ -7,7 +7,7 @@
       "@components/*": [
         "./src/components/*"
       ],
-      "@schemas/*": [
+      "#schemas/*": [
         "../dist/schemas/*"
       ]
     }

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { ModelSchema } from '@schemas/model.schema';
+import { ModelSchema } from '#schemas/model.schema';
 
 /**
  * Supported AI SDK v5 provider types

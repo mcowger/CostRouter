@@ -8,30 +8,37 @@
     "noEmit": false,
     "outDir": "./dist",
     "rootDir": "./",
-    
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
-    
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
-    
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
-    
     "baseUrl": "./",
     "paths": {
-      "@schemas/*": ["schemas/*"],
-      "@server/*": ["server/*"],
-      "@ui/*": ["ui/*"]
+      "@server/*": [
+        "server/*"
+      ],
+      "@ui/*": [
+        "ui/*"
+      ],
+      "#schemas/*": [
+        "schemas/*"
+      ]
     },
-    
-    "types": ["node", "jest"],
-    "lib": ["ES2022", "DOM"]
+    "types": [
+      "node",
+      "jest"
+    ],
+    "lib": [
+      "ES2022",
+      "DOM"
+    ]
   },
   "include": [
     "server/**/*",

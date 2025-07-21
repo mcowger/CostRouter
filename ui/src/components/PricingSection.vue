@@ -44,7 +44,7 @@
 
 <script setup lang="ts">
 // --- FIXED: Use path alias for import
-import type { Pricing } from '@schemas/pricing.schema';
+import type { Pricing } from '#schemas/pricing.schema';
 
 // --- FIXED: Use inline definitions for props and emits
 const props = defineProps<{

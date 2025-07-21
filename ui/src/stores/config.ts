@@ -1,6 +1,6 @@
 import { ref } from 'vue';
 import { defineStore } from 'pinia';
-import type { AppConfig } from '@schemas/appConfig.schema';
+import type { AppConfig } from '#schemas/appConfig.schema';
 
 export const useConfigStore = defineStore('config', () => {
   const config = ref<AppConfig | null>(null);

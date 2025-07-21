@@ -160,7 +160,7 @@
 
 <script setup lang="ts">
 // --- FIXED: Use path alias for imports
-import type { Provider, ProviderType } from '@schemas/provider.schema';
+import type { Provider, ProviderType } from '#schemas/provider.schema';
 
 // --- FIXED: Use inline definitions for props and emits
 const props = defineProps<{

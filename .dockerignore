@@ -1,0 +1,26 @@
+# .dockerignore
+
+# Ignore build outputs and local dependencies
+dist
+node_modules
+ui/node_modules
+ui/dist
+
+# Ignore local configuration and data files
+# These should be mounted as volumes into the container, not baked into the image.
+config.jsonc
+usage.db.json
+*.log
+
+# Ignore OS-specific files
+.DS_Store
+
+# Ignore IDE and git files
+.vscode
+.idea
+.git
+.gitignore
+
+# Ignore Docker files themselves
+Dockerfile
+.dockerignore

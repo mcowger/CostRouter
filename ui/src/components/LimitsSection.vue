@@ -41,9 +41,7 @@
 </template>
 
 <script setup lang="ts">
-// --- THE ONLY FIX NEEDED ---
-// Changed the import to use the '@schemas' path alias for consistency.
-import type { Limits } from '@schemas/limits.schema';
+import type { Limits } from '#schemas/limits.schema';
 
 const props = defineProps<{
   limits: Limits | null;

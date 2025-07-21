@@ -24,7 +24,7 @@ export default {
   ],
   moduleNameMapper: {
     '^(\\.{1,2}/.*)\\.js$': '$1',
-    '^@schemas/(.*)$': '<rootDir>/schemas/$1'
+    '^#schemas/(.*)$': '<rootDir>/schemas/$1'
   },
   setupFilesAfterEnv: ['<rootDir>/server/__tests__/setup.ts'],
   collectCoverageFrom: [

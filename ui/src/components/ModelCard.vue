@@ -68,9 +68,9 @@
 </template>
 
 <script setup lang="ts">
-import type { Model } from '@schemas/model.schema';
-import type { Pricing } from '@schemas/pricing.schema';
-import type { Limits } from '@schemas/limits.schema';
+import type { Model } from '#schemas/model.schema';
+import type { Pricing } from '#schemas/pricing.schema';
+import type { Limits } from '#schemas/limits.schema';
 import PricingSection from './PricingSection.vue';
 import LimitsSection from './LimitsSection.vue';
 

@@ -8,9 +8,12 @@
   "workspaces": [
     "ui"
   ],
-"scripts": {
+  "imports": {
+    "#schemas/*": "./dist/schemas/*.js"
+  },
+  "scripts": {
   "test": "jest",
-  "start": "node dist/server/index.js",
+  "start": "node dist/server/index.js --config config.jsonc -l info --usage-db-path usage.db.json",
   "test:coverage": "jest --coverage",
   "test:e2e": "jest --config jest.e2e.config.js",
   "clean": "rm -rf dist node_modules ui/dist ui/node_modules",
@@ -18,9 +21,7 @@
   "dev": "concurrently \"npm:dev:server\" \"npm:dev:ui\"",
   "test:watch": "jest --watch",
   "dev:server": "nodemon",
-  "build": "vue-tsc --build && vite build ui",
-  "build:server": "tsc --build ./server",
-  "build:ui": "vue-tsc --build ./ui && vite build ./ui",
+  "build": "vue-tsc --build && vite --emptyOutDir build ui ",
   "type-check": "vue-tsc --build --noEmit"
 },
   "dependencies": {
