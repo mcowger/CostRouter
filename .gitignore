@@ -3,6 +3,7 @@ build/
 dist/
 **/dist/*
 
+config/*.jsonc
 npm-debug.log*
 config.json
 config.jsonc
