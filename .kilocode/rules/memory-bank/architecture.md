@@ -10,85 +10,82 @@ The core design revolves around a set of singleton manager classes that are init
 graph TD
     subgraph Express Server
         A[Incoming Request: POST /v1/chat/completions] --> B{Router Middleware};
-        B --> C{Executor Middleware};
+        B --> C{UnifiedExecutor Middleware};
         C --> D[Response to Client];
     end
 
     subgraph Core Components (Singletons)
-        E[ConfigManager] --> B;
-        E --> F[UsageManager];
+        E[ConfigManager] --> F[UsageManager];
+        E --> G[UsageDatabaseManager];
+        E --> H[PriceData];
         F --> B;
-        F --> G[All Executors];
+        F --> C;
+        H --> C;
     end
-
-    subgraph Executors
-        C --> G;
-        G --> H[CopilotExecutor];
-        G --> I[OpenAIExecutor];
+    
+    subgraph Unified AI SDK Executor
+      C -- "Delegates to..." --> I{ai-sdk Instances};
+      I -- "Handles all providers" --> J[OpenAI, Anthropic, Google, etc.];
     end
 
     A -- "req.body.model" --> B;
-    B -- "Adds chosenProvider to res.locals" --> C;
-    C -- "Uses chosenProvider" --> G;
-    G -- "Makes API call" --> D;
-
-    style Core Components fill:#f9f,stroke:#333,stroke-width:2px
-    style Executors fill:#ccf,stroke:#333,stroke-width:2px
+    B -- "Adds chosenProvider & chosenModel to res.locals" --> C;
+    C -- "Uses chosenProvider to call correct SDK instance" --> I;
+    I -- "Makes API call" --> J;
+    J -- "API Response" --> C;
+    C -- "Streams response back" --> D;
+    
+    style "Core Components (Singletons)" fill:#f9f,stroke:#333,stroke-width:2px
+    style "Unified AI SDK Executor" fill:#ccf,stroke:#333,stroke-width:2px
 ```
 
 ## Core Components
 
-The system is composed of several key singleton classes found in `src/components/`:
+The system is composed of several key singleton classes found in `server/components/`:
 
 *   **`ConfigManager.ts`**:
-    *   **Responsibility**: The source of truth for all configuration. It loads, validates (using Zod schemas), and holds the application configuration from a JSONC file specified via a command-line argument.
-    *   **Key Operations**:
-        *   Parses the config file on startup.
-        *   Validates the configuration against `AppConfigSchema`.
-        *   Provides static methods (`getInstance`, `getProviders`) to access the validated config.
+    *   **Responsibility**: The source of truth for all configuration. It loads, validates (using Zod schemas), and holds the application configuration from a JSONC file specified via a command-line argument. It also handles dynamic updates to the configuration at runtime.
+    *   **Key Operations**: Parses and validates the config on startup, provides static methods to access the config, and handles atomic writes for updates.
 
 *   **`UsageManager.ts`**:
-    *   **Responsibility**: Manages and tracks usage for all configured providers to enforce rate limits.
+    *   **Responsibility**: Manages and tracks usage for all configured providers to enforce rate limits in real-time.
     *   **Key Library**: `rate-limiter-flexible`.
-    *   **Key Operations**:
-        *   Initializes a map of `RateLimiterMemory` instances based on the limits defined in `ConfigManager`.
-        *   Exposes `isUnderLimit(providerId)` to check if a provider can handle a request.
-        *   Exposes `consume(providerId, usage)` to record the resources used by a request.
+    *   **Key Operations**: Initializes a map of `RateLimiterMemory` instances, exposes `isUnderLimit()` for pre-flight checks, and `consume()` to record usage after a request.
+
+*   **`UsageDatabaseManager.ts`**:
+    *   **Responsibility**: Persists historical usage data to a local JSON file for long-term analytics and dashboard visualization.
+    *   **Key Library**: `lowdb`.
+    *   **Key Operations**: Initializes the database, provides `recordUsage()` to save data, and `getUsage()` to query historical records.
+
+*   **`PriceData.ts`**:
+    *   **Responsibility**: Manages pricing information for all models, providing a centralized way to calculate the cost of a request. It uses a combination of hardcoded values and provider-specific pricing from the configuration.
 
 *   **`Router.ts`**:
     *   **Responsibility**: To select the most appropriate provider for an incoming request. It acts as Express middleware.
-    *   **Key Operations**:
-        *   `chooseProvider(req, res, next)`: The main middleware function.
-        *   Finds all candidate providers that support the requested model (`req.body.model`).
-        *   Iterates through candidates, using `UsageManager.isUnderLimit()` to find the first one with available capacity.
-        *   Attaches the selected `Provider` object to `res.locals.chosenProvider` and passes control to the next middleware.
+    *   **Key Operations**: Finds candidate providers for the requested model, uses `UsageManager.isUnderLimit()` to find one with available capacity, and attaches the selected `Provider` and `Model` objects to `res.locals`.
 
-*   **`Executor.ts`**:
-    *   **Responsibility**: To execute the API request against the provider chosen by the `Router`. It also acts as Express middleware.
-    *   **Key Operations**:
-        *   `execute(req, res)`: The main middleware function.
-        *   Retrieves the chosen provider from `res.locals.chosenProvider`.
-        *   Delegates the actual API call to a provider-specific executor (e.g., `OpenAIExecutor`, `CopilotExecutor`) based on the provider's `type`.
-        *   The specific executor is responsible for calling `UsageManager.consume()` after the request is complete.
+*   **`UnifiedExecutor.ts`**:
+    *   **Responsibility**: To execute the API request against the provider chosen by the `Router`, using the Vercel AI SDK. It acts as Express middleware.
+    *   **Key Operations**: Retrieves the chosen provider, gets or creates a cached AI SDK instance for that provider type, calls the AI SDK to make the API call, and streams the response back to the client. It is responsible for calling `UsageManager.consume()` after the request is complete.
 
 ## Request Lifecycle (The Pipeline)
 
-1.  **Startup**: When `src/index.ts` is run, the `main` function initializes the singletons in the correct order: `ConfigManager`, then `UsageManager`, then `Router`.
+1.  **Startup**: When `server/index.ts` is run, the `main` function initializes the singletons in the correct order: `ConfigManager`, `PriceData`, `UsageManager`, `UsageDatabaseManager`, and `Router`.
 2.  **Request Reception**: The Express server receives a `POST` request on `/v1/chat/completions`.
 3.  **Routing (`Router.chooseProvider`)**:
     *   The `Router` middleware identifies candidate providers for the requested model.
     *   It checks each candidate's rate limits via the `UsageManager`.
     *   The first available provider is selected and attached to the response object (`res.locals`).
-4.  **Execution (`Executor.execute`)**:
-    *   The `Executor` middleware takes the selected provider.
-    *   It invokes the corresponding specific executor (e.g., `OpenAIExecutor`).
-    *   The specific executor uses the `ai-sdk` to make the final API call.
-    *   It streams the response back to the original client.
-5.  **Usage Tracking**: After the stream is complete, the specific executor calls `usageManager.consume()` to update the rate limit counters for the provider that was used.
+4.  **Execution (`UnifiedExecutor.execute`)**:
+    *   The `UnifiedExecutor` middleware takes the selected provider.
+    *   It uses a factory pattern to get the correct Vercel AI SDK instance for the provider's `type` (e.g., `createOpenAI`, `createAnthropic`).
+    *   It uses the `ai-sdk` (`streamText` or `generateText`) to make the final API call.
+    *   It streams the response back to the original client in the standard OpenAI format.
+5.  **Usage Tracking**: After the stream is complete, the `UnifiedExecutor` calculates the cost and calls `UsageManager.consume()` to update the rate limit counters and `UsageDatabaseManager.recordUsage()` to persist the data.
 
 ## Source Code Paths
 
-*   **Main Entry Point**: [`src/index.ts`](src/index.ts)
-*   **Core Components**: [`src/components/`](src/components/)
-*   **Specific Executors**: [`src/components/executors/`](src/components/executors/)
-*   **Configuration Schemas (Zod)**: [`src/schemas/`](src/schemas/)
+*   **Main Entry Point**: [`server/index.ts`](server/index.ts)
+*   **Core Components**: [`server/components/`](server/components/)
+*   **Configuration Schemas (Zod)**: [`schemas/`](schemas/)
+*   **UI Source**: [`ui/src/`](ui/src/)

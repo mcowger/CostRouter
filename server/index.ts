@@ -10,7 +10,7 @@ import { Router } from "./components/Router.js";
 import { UsageManager } from "./components/UsageManager.js";
 import { UsageDatabaseManager } from "./components/UsageDatabaseManager.js";
 import { logger, responseBodyLogger, requestResponseLogger } from "./components/Logger.js";
-import { Executor } from "./components/Executor.js";
+import { UnifiedExecutor } from "./components/UnifiedExecutor.js";
 import { getErrorMessage } from "./components/Utils.js";
 
 async function main() {
@@ -68,7 +68,7 @@ async function main() {
   // --- 3. Get Instances ---
   const router = Router.getInstance();
   const usageManager = UsageManager.getInstance();
-  const executor = Executor.getInstance(usageManager);
+  const executor = new UnifiedExecutor(usageManager);
 
   // --- 3. Express Server Setup ---
   // Initialize Express application
