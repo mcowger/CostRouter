@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import { PricingSchema } from './pricing.schema';
-import { LimitSchema } from './limits.schema';
+import { PricingSchema } from '@schemas/pricing.schema';
+import { LimitSchema } from '@schemas/limits.schema';
 
 /**
  * Zod schema for a single model configuration, including optional pricing and limits.

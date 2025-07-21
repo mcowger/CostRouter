@@ -1,10 +1,10 @@
 <template>
   <div class="optional-section">
-    <div v-if="limits" class="limits-section">
+    <div v-if="props.limits" class="limits-section">
       <div class="section-header">
         <h5>Rate Limits</h5>
         <button
-          @click="$emit('remove')"
+          @click="emit('remove')"
           class="remove-button small"
           title="Remove Limits"
         >
@@ -19,10 +19,10 @@
         <label>{{ field.label }}:</label>
         <input
           type="number"
-          :value="limits[field.key] || ''"
-          @input="updateLimits(field.key, $event.target.value)"
+          :value="props.limits[field.key] || ''"
+          @input="updateLimits(field.key, $event)"
           class="form-input"
-          :placeholder="limits[field.key] !== undefined ? '' : 'Not Configured'"
+          :placeholder="props.limits[field.key] !== undefined ? '' : 'Not Configured'"
           step="0.01"
           min="0"
         />
@@ -30,7 +30,7 @@
     </div>
     <div v-else class="add-section">
       <button
-        @click="$emit('add')"
+        @click="emit('add')"
         class="add-button secondary"
       >
         <span class="button-icon">+</span>
@@ -41,22 +41,26 @@
 </template>
 
 <script setup lang="ts">
-import type { Limits } from '../../../schemas/limits.schema';
+// --- THE ONLY FIX NEEDED ---
+// Changed the import to use the '@schemas' path alias for consistency.
+import type { Limits } from '@schemas/limits.schema';
 
-interface Props {
-  limits?: Limits;
-}
+const props = defineProps<{
+  limits: Limits | null;
+}>();
 
-interface Emits {
+const emit = defineEmits<{
   (e: 'add'): void;
   (e: 'remove'): void;
   (e: 'update', limits: Limits): void;
+}>();
+
+interface FieldDefinition {
+  label: string;
+  key: keyof Limits;
 }
 
-const props = defineProps<Props>();
-const emit = defineEmits<Emits>();
-
-const limitsFields = [
+const limitsFields: FieldDefinition[] = [
   { key: 'requestsPerMinute', label: 'Requests Per Minute' },
   { key: 'requestsPerHour', label: 'Requests Per Hour' },
   { key: 'requestsPerDay', label: 'Requests Per Day' },
@@ -65,22 +69,20 @@ const limitsFields = [
   { key: 'tokensPerDay', label: 'Tokens Per Day' },
   { key: 'costPerMinute', label: 'Cost Per Minute' },
   { key: 'costPerHour', label: 'Cost Per Hour' },
-  { key: 'costPerDay', label: 'Cost Per Day' }
+  { key: 'costPerDay', label: 'Cost Per Day' },
 ];
 
-const formatLimitKey = (key: string): string => {
-  return key
-    .replace(/([A-Z])/g, ' $1')
-    .replace(/^./, str => str.toUpperCase())
-    .replace(/per/gi, 'Per');
-};
+const updateLimits = (key: keyof Limits, event: Event): void => {
+  const target = event.target as HTMLInputElement;
+  const value = target.value;
 
-const updateLimits = (key: string, value: string): void => {
   if (!props.limits) return;
 
   const updatedLimits = { ...props.limits };
   const numValue = parseFloat(value);
-  updatedLimits[key as keyof Limits] = isNaN(numValue) ? undefined : numValue;
+
+  updatedLimits[key] = isNaN(numValue) ? undefined : numValue;
+
   emit('update', updatedLimits);
 };
 </script>

@@ -8,7 +8,7 @@ import lodash from "lodash";
  * before any route handlers.
  */
 export const responseBodyLogger = (
-  req: Request,
+  _req: Request,
   res: Response,
   next: NextFunction,
 ) => {

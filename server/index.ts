@@ -223,13 +223,22 @@ async function main() {
   // --- Static UI Serving (after API routes) ---
   const __filename = fileURLToPath(import.meta.url);
   const __dirname = path.dirname(__filename);
-  const uiBuildPath = path.join(__dirname, '../ui/dist');
+
+  // Dynamic path detection for dev vs production
+  // In dev: __dirname is server/, so we need ../ui/dist
+  // In prod: __dirname is dist/server/, so we need ../../ui/dist
+  const isDevelopment = __dirname.endsWith('server');
+  const uiBuildPath = isDevelopment 
+    ? path.join(__dirname, '../ui/dist')
+    : path.join(__dirname, '../../ui/dist');
+
   app.use(express.static(uiBuildPath));
 
   // Catch-all handler: send back React's index.html file for any non-API routes
   app.get('*', (_req, res) => {
     res.sendFile(path.join(uiBuildPath, 'index.html'));
   });
+
 
   const PORT = process.env.PORT || 3000;
   app.listen(PORT, () => {

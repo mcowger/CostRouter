@@ -6,11 +6,11 @@
         API Key
         <span v-if="isApiKeyRequired(provider.type)" class="required">*</span>
       </label>
-      <input 
-        type="password" 
+      <input
+        type="password"
         :value="provider.apiKey || ''"
-        @input="updateProvider('apiKey', $event.target.value)"
-        id="apiKey" 
+        @input="updateProvider('apiKey', $event)"
+        id="apiKey"
         class="form-input"
         :placeholder="getApiKeyPlaceholder(provider.type)"
         :required="isApiKeyRequired(provider.type)"
@@ -23,11 +23,11 @@
         Base URL
         <span v-if="isBaseUrlRequired(provider.type)" class="required">*</span>
       </label>
-      <input 
-        type="url" 
+      <input
+        type="url"
         :value="provider.baseURL || ''"
-        @input="updateProvider('baseURL', $event.target.value)"
-        id="baseURL" 
+        @input="updateProvider('baseURL', $event)"
+        id="baseURL"
         class="form-input"
         :placeholder="getBaseUrlPlaceholder(provider.type)"
         :required="isBaseUrlRequired(provider.type)"
@@ -41,27 +41,27 @@
           Resource Name
           <span class="required">*</span>
         </label>
-        <input 
-          type="text" 
+        <input
+          type="text"
           :value="provider.resourceName || ''"
-          @input="updateProvider('resourceName', $event.target.value)"
-          id="resourceName" 
+          @input="updateProvider('resourceName', $event)"
+          id="resourceName"
           class="form-input"
           placeholder="your-azure-resource"
           required
         />
       </div>
-      
+
       <div class="form-group">
         <label for="deploymentName">
           Deployment Name
           <span class="required">*</span>
         </label>
-        <input 
-          type="text" 
+        <input
+          type="text"
           :value="provider.deploymentName || ''"
-          @input="updateProvider('deploymentName', $event.target.value)"
-          id="deploymentName" 
+          @input="updateProvider('deploymentName', $event)"
+          id="deploymentName"
           class="form-input"
           placeholder="your-deployment-name"
           required
@@ -76,43 +76,43 @@
           AWS Access Key ID
           <span class="required">*</span>
         </label>
-        <input 
-          type="text" 
+        <input
+          type="text"
           :value="provider.accessKeyId || ''"
-          @input="updateProvider('accessKeyId', $event.target.value)"
-          id="accessKeyId" 
+          @input="updateProvider('accessKeyId', $event)"
+          id="accessKeyId"
           class="form-input"
           placeholder="AKIA..."
           required
         />
       </div>
-      
+
       <div class="form-group">
         <label for="secretAccessKey">
           AWS Secret Access Key
           <span class="required">*</span>
         </label>
-        <input 
-          type="password" 
+        <input
+          type="password"
           :value="provider.secretAccessKey || ''"
-          @input="updateProvider('secretAccessKey', $event.target.value)"
-          id="secretAccessKey" 
+          @input="updateProvider('secretAccessKey', $event)"
+          id="secretAccessKey"
           class="form-input"
           placeholder="Your AWS secret key"
           required
         />
       </div>
-      
+
       <div class="form-group">
         <label for="region">
           AWS Region
           <span class="required">*</span>
         </label>
-        <input 
-          type="text" 
+        <input
+          type="text"
           :value="provider.region || ''"
-          @input="updateProvider('region', $event.target.value)"
-          id="region" 
+          @input="updateProvider('region', $event)"
+          id="region"
           class="form-input"
           placeholder="us-east-1"
           required
@@ -127,24 +127,24 @@
           Project ID
           <span class="required">*</span>
         </label>
-        <input 
-          type="text" 
+        <input
+          type="text"
           :value="provider.resourceName || ''"
-          @input="updateProvider('resourceName', $event.target.value)"
-          id="resourceName" 
+          @input="updateProvider('resourceName', $event)"
+          id="resourceName"
           class="form-input"
           placeholder="your-gcp-project-id"
           required
         />
       </div>
-      
+
       <div class="form-group">
         <label for="region">Location (optional)</label>
-        <input 
-          type="text" 
+        <input
+          type="text"
           :value="provider.region || ''"
-          @input="updateProvider('region', $event.target.value)"
-          id="region" 
+          @input="updateProvider('region', $event)"
+          id="region"
           class="form-input"
           placeholder="us-central1"
         />
@@ -159,26 +159,33 @@
 </template>
 
 <script setup lang="ts">
-import type { Provider, ProviderType } from '../../../schemas/provider.schema';
+// --- FIXED: Use path alias for imports
+import type { Provider, ProviderType } from '@schemas/provider.schema';
 
-interface Props {
+// --- FIXED: Use inline definitions for props and emits
+const props = defineProps<{
   provider: Provider;
-}
+}>();
 
-interface Emits {
+const emit = defineEmits<{
   (e: 'update', provider: Provider): void;
-}
+}>();
 
-const props = defineProps<Props>();
-const emit = defineEmits<Emits>();
+// --- FIXED: Function now accepts Event, is type-safe, and handles logic internally
+const updateProvider = (field: keyof Provider, event: Event): void => {
+  const target = event.target as HTMLInputElement;
+  const value = target.value;
 
-const updateProvider = (field: keyof Provider, value: string): void => {
   const updatedProvider = { ...props.provider };
+
+  // Because `Provider` is a union of different types, asserting the object
+  // to `any` here is a pragmatic way to assign a dynamic key.
   if (value === '') {
-    delete updatedProvider[field];
+    delete (updatedProvider as any)[field];
   } else {
-    updatedProvider[field] = value as any;
+    (updatedProvider as any)[field] = value;
   }
+
   emit('update', updatedProvider);
 };
 

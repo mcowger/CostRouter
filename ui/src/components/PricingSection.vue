@@ -1,5 +1,6 @@
 <template>
   <div class="optional-section">
+    <!-- The v-if correctly guards against null/undefined props -->
     <div v-if="pricing" class="pricing-section">
       <div class="section-header">
         <h5>Pricing</h5>
@@ -11,6 +12,7 @@
           <span class="button-icon">×</span>
         </button>
       </div>
+      <!-- The v-for uses the new, strongly-typed pricingFields array -->
       <div
         v-for="field in pricingFields"
         :key="field.key"
@@ -20,7 +22,7 @@
         <input
           type="number"
           :value="pricing[field.key] || ''"
-          @input="updatePricing(field.key, $event.target.value)"
+          @input="updatePricing(field.key, $event)"
           class="form-input"
           :placeholder="pricing[field.key] !== undefined ? '' : 'Not Configured'"
           step="0.0001"
@@ -41,41 +43,46 @@
 </template>
 
 <script setup lang="ts">
-import type { Pricing } from '../../../schemas/pricing.schema';
+// --- FIXED: Use path alias for import
+import type { Pricing } from '@schemas/pricing.schema';
 
-interface Props {
-  pricing?: Pricing;
-}
+// --- FIXED: Use inline definitions for props and emits
+const props = defineProps<{
+  pricing?: Pricing | null; // Allow null for consistency
+}>();
 
-interface Emits {
+const emit = defineEmits<{
   (e: 'add'): void;
   (e: 'remove'): void;
   (e: 'update', pricing: Pricing): void;
+}>();
+
+// --- FIXED: Define the shape of the field objects
+interface FieldDefinition {
+  label: string;
+  key: keyof Pricing; // This ensures keys are valid
 }
 
-const props = defineProps<Props>();
-const emit = defineEmits<Emits>();
-
-const pricingFields = [
+// --- FIXED: Apply the strong type to the array
+const pricingFields: FieldDefinition[] = [
   { key: 'inputCostPerMillionTokens', label: 'Input Cost Per Million Tokens' },
   { key: 'outputCostPerMillionTokens', label: 'Output Cost Per Million Tokens' },
   { key: 'costPerRequest', label: 'Cost Per Request' }
 ];
 
-const formatPricingKey = (key: string): string => {
-  return key
-    .replace(/([A-Z])/g, ' $1')
-    .replace(/^./, str => str.toUpperCase())
-    .replace(/cost/gi, 'Cost')
-    .replace(/per/gi, 'Per');
-};
+// --- FIXED: Refactor function to accept the event and be fully type-safe
+const updatePricing = (key: keyof Pricing, event: Event): void => {
+  const target = event.target as HTMLInputElement;
+  const value = target.value;
 
-const updatePricing = (key: string, value: string): void => {
   if (!props.pricing) return;
 
   const updatedPricing = { ...props.pricing };
   const numValue = parseFloat(value);
-  updatedPricing[key as keyof Pricing] = isNaN(numValue) ? undefined : numValue;
+
+  // No type assertion needed here anymore
+  updatedPricing[key] = isNaN(numValue) ? undefined : numValue;
+
   emit('update', updatedPricing);
 };
 </script>

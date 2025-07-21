@@ -1,0 +1,6 @@
+{
+  "watch": ["server", "schemas"],
+  "ext": "ts,json",
+  "exec": "tsx server/index.ts --config config.jsonc --usage-db-path usage.db.json",
+  "signal": "SIGTERM"
+}

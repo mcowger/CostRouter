@@ -1,8 +1,11 @@
 node_modules/
 build/
+dist/
+**/dist/*
 
 npm-debug.log*
 config.json
 config.jsonc
 copilot.data
 usage.db.json
+.DS_Store

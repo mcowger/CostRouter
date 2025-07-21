@@ -3,7 +3,7 @@ import { promises as fs } from 'fs';
 import { AppConfig, AppConfigSchema } from '../../schemas/appConfig.schema.js';
 import { Provider } from '../../schemas/provider.schema';
 import { parse } from 'jsonc-parser';
-import { logger, PinoLogger } from "./Logger.js";
+import { logger } from "./Logger.js";
 import { getErrorMessage } from './Utils.js';
 
 export class ConfigManager {

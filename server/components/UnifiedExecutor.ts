@@ -12,28 +12,28 @@ import {
 } from "ai";
 import { getErrorMessage } from "./Utils.js";
 // Import OpenAI types for proper response formatting
-import type { ChatCompletion, ChatCompletionChunk } from "openai/resources/chat/completions";
-// Import all AI SDK providers
-import { createOpenAI } from "@ai-sdk/openai";
-import { createAnthropic } from "@ai-sdk/anthropic";
-import { createGoogleGenerativeAI } from "@ai-sdk/google";
-import { createVertex } from "@ai-sdk/google-vertex";
+import type { ChatCompletion, ChatCompletionChunk } from "openai/resources";
+// Import AI SDK providers
+import { createOpenAI, OpenAIProviderSettings } from "@ai-sdk/openai";
+import { AnthropicProviderSettings, createAnthropic } from "@ai-sdk/anthropic";
+import { createGoogleGenerativeAI, GoogleGenerativeAIProviderSettings } from "@ai-sdk/google";
+import { createVertex, GoogleVertexProviderSettings } from "@ai-sdk/google-vertex";
 //import { createAzure } from "@ai-sdk/azure"; // Commented out until wI figure out the resourceName
 //import { createAmazonBedrock } from "@ai-sdk/amazon-bedrock"; // Commented out until we verify API
-import { createGroq } from "@ai-sdk/groq";
-import { createMistral } from "@ai-sdk/mistral";
-import { createDeepSeek } from "@ai-sdk/deepseek";
-import { createXai } from "@ai-sdk/xai";
-import { createPerplexity } from "@ai-sdk/perplexity";
-import { createTogetherAI } from "@ai-sdk/togetherai";
+import { createGroq, GroqProviderSettings } from "@ai-sdk/groq";
+import { createMistral, MistralProviderSettings } from "@ai-sdk/mistral";
+import { createDeepSeek, DeepSeekProviderSettings } from "@ai-sdk/deepseek";
+import { createXai, XaiProviderSettings } from "@ai-sdk/xai";
+import { createPerplexity, PerplexityProviderSettings } from "@ai-sdk/perplexity";
+import { createTogetherAI, TogetherAIProviderSettings } from "@ai-sdk/togetherai";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 
 // import { createOpenRouter } from '@openrouter/ai-sdk-provider'; Only supports v5, 
 // which nothing else does.  For now, treat it as openai-compatible
-import { createOllama } from "ollama-ai-provider";
-import { createQwen } from "qwen-ai-provider";
-import { createGeminiProvider } from "ai-sdk-provider-gemini-cli"
-import {  createClaudeCode } from "ai-sdk-provider-claude-code"
+import { createOllama, OllamaProviderSettings } from "ollama-ai-provider";
+import { createQwen, QwenProviderSettings } from "qwen-ai-provider";
+import { createGeminiProvider  } from "ai-sdk-provider-gemini-cli"
+//import {  ClaudeCodeProviderSettings, createClaudeCode } from "ai-sdk-provider-claude-code"
 
 /**
  * Unified executor that handles all AI SDK v5 providers.
@@ -45,21 +45,21 @@ export class UnifiedExecutor {
 
   // Map of provider types to their factory functions
   // Adding new providers is as simple as adding a new entry here!
+  
   private static readonly PROVIDER_FACTORIES = new Map<string, (config: Provider) => any>([
     // Core AI SDK providers
-    ["openai", (config) => createOpenAI({
+    ["openai", (config: OpenAIProviderSettings) => createOpenAI({
       apiKey: config.apiKey,
       baseURL: config.baseURL // Support custom OpenAI endpoints
     })],
-    ["anthropic", (config) => createAnthropic({
+    ["anthropic", (config: AnthropicProviderSettings) => createAnthropic({
       apiKey: config.apiKey
     })],
-    ["google", (config) => createGoogleGenerativeAI({
-      apiKey: config.apiKey
+    ["google", (config: GoogleGenerativeAIProviderSettings) => createGoogleGenerativeAI({
+      apiKey: config.apiKey,
     })],
-    ["google-vertex", (config) => createVertex({
-      project: config.resourceName, // Use resourceName as project ID
-      location: config.region || "us-central1" // Default location
+    ["google-vertex", (config: GoogleVertexProviderSettings) => createVertex({
+      googleAuthOptions: config.googleAuthOptions
     })],
 
     // Commented out until I can add this to the provider schema.
@@ -68,41 +68,41 @@ export class UnifiedExecutor {
     //   secretAccessKey: config.secretAccessKey,
     //   region: config.region
     // })],
-    ["groq", (config) => createGroq({
+    ["groq", (config: GroqProviderSettings) => createGroq({
       apiKey: config.apiKey
     })],
-    ["mistral", (config) => createMistral({
+    ["mistral", (config: MistralProviderSettings) => createMistral({
       apiKey: config.apiKey
     })],
-    ["deepseek", (config) => createDeepSeek({
+    ["deepseek", (config: DeepSeekProviderSettings) => createDeepSeek({
       apiKey: config.apiKey
     })],
-    ["xai", (config) => createXai({
+    ["xai", (config: XaiProviderSettings) => createXai({
       apiKey: config.apiKey
     })],
-    ["perplexity", (config) => createPerplexity({
+    ["perplexity", (config: PerplexityProviderSettings) => createPerplexity({
       apiKey: config.apiKey
     })],
-    ["togetherai", (config) => createTogetherAI({
+    ["togetherai", (config: TogetherAIProviderSettings) => createTogetherAI({
       apiKey: config.apiKey
     })],
 
 
     // OpenAI-compatible providers
-    ["qwen", (config) => createQwen({
+    ["qwen", (config: QwenProviderSettings) => createQwen({
       apiKey: config.apiKey!,
     })],
 
     // OpenAI-compatible providers
-    ["ollama", (config) => createOllama({
+    ["ollama", (config: OllamaProviderSettings) => createOllama({
       baseURL: config.baseURL || "http://localhost:11434",
     })],
-    ["gemini-cli", (config) => createGeminiProvider({ 
+    ["gemini-cli", (_config: any) => createGeminiProvider({ 
       authType: "oauth-personal"
     })],
-    ["claude-code", (config) => createClaudeCode({
+    // ["claude-code", (_config: ClaudeCodeProviderSettings) => createClaudeCode({
 
-    })],
+    // })],
     // OpenRouter - use compatible for now because their provider only supports v5.
     ["openrouter", (config) => createOpenAICompatible({
       name: config.id,

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { ModelSchema } from './model.schema';
+import { ModelSchema } from '@schemas/model.schema';
 
 /**
  * Supported AI SDK v5 provider types
@@ -72,7 +72,7 @@ export const ProviderSchema = z
   })
   .refine((data) => {
     // Validation for providers that require API key
-    const apiKeyRequired = [
+    const apiKeyRequired: string[] = [
       "openai", "anthropic", "google", "google-vertex", "azure",
       "groq", "mistral", "deepseek", "xai", "perplexity", "togetherai",
       "openrouter", "qwen"
@@ -84,7 +84,7 @@ export const ProviderSchema = z
   })
   .refine((data) => {
     // Validation for OpenAI-compatible providers (baseURL + apiKey required)
-    const openaiCompatible = ["openai-compatible", "custom"];
+    const openaiCompatible: string[] = ["openai-compatible", "custom"];
     return !openaiCompatible.includes(data.type) || (data.baseURL && data.apiKey);
   }, {
     message: "Both baseURL and apiKey are required for OpenAI-compatible providers",

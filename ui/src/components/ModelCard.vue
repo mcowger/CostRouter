@@ -2,8 +2,8 @@
   <div class="model-item">
     <div class="model-header">
       <h5>Model {{ modelIndex + 1 }}</h5>
-      <button 
-        @click="$emit('remove')" 
+      <button
+        @click="emit('remove')"
         class="remove-button small"
         title="Remove Model"
       >
@@ -13,29 +13,28 @@
 
     <div class="form-group">
       <label>Model Name:</label>
-      <input 
-        type="text" 
+      <input
+        type="text"
         :value="model.name"
-        @input="updateModel('name', $event.target.value)"
+        @input="updateModel('name', $event)"
         class="form-input"
         placeholder="gpt-4"
       />
       <small class="field-help">The actual model name used by the provider</small>
     </div>
-    
+
     <div class="form-group">
       <label>Mapped Name (optional):</label>
-      <input 
-        type="text" 
+      <input
+        type="text"
         :value="model.mappedName || ''"
-        @input="updateModel('mappedName', $event.target.value)"
+        @input="updateModel('mappedName', $event)"
         class="form-input"
         placeholder="gpt-4"
       />
       <small class="field-help">The name clients will use in requests (defaults to model name if not provided)</small>
     </div>
 
-    <!-- Model Pricing Accordion -->
     <details class="accordion">
       <summary class="accordion-header">
         <span>Pricing</span>
@@ -51,7 +50,6 @@
       </div>
     </details>
 
-    <!-- Model Rate Limits Accordion -->
     <details class="accordion">
       <summary class="accordion-header">
         <span>Rate Limits</span>
@@ -70,42 +68,41 @@
 </template>
 
 <script setup lang="ts">
-import type { Model } from '../../../schemas/model.schema';
-import type { Pricing } from '../../../schemas/pricing.schema';
-import type { Limits } from '../../../schemas/limits.schema';
+import type { Model } from '@schemas/model.schema';
+import type { Pricing } from '@schemas/pricing.schema';
+import type { Limits } from '@schemas/limits.schema';
 import PricingSection from './PricingSection.vue';
 import LimitsSection from './LimitsSection.vue';
 
-interface Props {
+const props = defineProps<{
   model: Model;
   modelIndex: number;
-}
+}>();
 
-interface Emits {
+const emit = defineEmits<{
   (e: 'update', model: Model): void;
   (e: 'remove'): void;
-}
+}>();
 
-const props = defineProps<Props>();
-const emit = defineEmits<Emits>();
-
-const updateModel = (field: keyof Model, value: string): void => {
+const updateModel = (field: 'name' | 'mappedName', event: Event) => {
+  const target = event.target as HTMLInputElement;
+  const value = target.value;
   const updatedModel = { ...props.model };
+
   if (field === 'mappedName' && value === '') {
     delete updatedModel.mappedName;
   } else {
-    updatedModel[field] = value as any;
+    updatedModel[field] = value;
   }
   emit('update', updatedModel);
 };
 
 const addPricing = (): void => {
-  const updatedModel = { 
-    ...props.model, 
+  const updatedModel = {
+    ...props.model,
     pricing: {
       inputCostPerMillionTokens: 0,
       outputCostPerMillionTokens: 0,
-      costPerRequest: undefined
     }
   };
   emit('update', updatedModel);
@@ -125,19 +122,9 @@ const updatePricing = (pricing: Pricing): void => {
 };
 
 const addLimits = (): void => {
-  const updatedModel = { 
-    ...props.model, 
-    limits: {
-      requestsPerMinute: undefined,
-      requestsPerHour: undefined,
-      requestsPerDay: undefined,
-      tokensPerMinute: undefined,
-      tokensPerHour: undefined,
-      tokensPerDay: undefined,
-      costPerMinute: undefined,
-      costPerHour: undefined,
-      costPerDay: undefined
-    }
+  const updatedModel = {
+    ...props.model,
+    limits: {}
   };
   emit('update', updatedModel);
 };
@@ -157,6 +144,7 @@ const updateLimits = (limits: Limits): void => {
 </script>
 
 <style scoped>
+/* Styles remain unchanged */
 .model-item {
   padding: 15px;
   background: var(--color-background-soft);

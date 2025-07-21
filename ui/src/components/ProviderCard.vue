@@ -17,7 +17,7 @@
         <input
           type="text"
           :value="provider.id"
-          @input="updateProvider('id', $event.target.value)"
+          @input="updateProvider('id', ($event.target as HTMLInputElement).value)"
           id="id"
           class="form-input"
           placeholder="provider-id"
@@ -28,7 +28,7 @@
         <label for="type">Type:</label>
         <select 
           :value="provider.type" 
-          @change="updateProvider('type', $event.target.value)"
+          @change="updateProvider('type', ($event.target as HTMLInputElement).value)"
           id="type" 
           class="form-input"
         >
