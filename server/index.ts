@@ -223,7 +223,7 @@ async function main() {
   // --- Static UI Serving (after API routes) ---
   const __filename = fileURLToPath(import.meta.url);
   const __dirname = path.dirname(__filename);
-  const uiBuildPath = path.join(__dirname, '../../ui/build');
+  const uiBuildPath = path.join(__dirname, '../ui/dist');
   app.use(express.static(uiBuildPath));
 
   // Catch-all handler: send back React's index.html file for any non-API routes
@@ -234,7 +234,6 @@ async function main() {
   const PORT = process.env.PORT || 3000;
   app.listen(PORT, () => {
     logger.info(`LLM Gateway listening on port ${PORT}`);
-    logger.info(`OpenAPI Spec available at http://localhost:${PORT}/v1/openapi.json`);
   });
 }
 
