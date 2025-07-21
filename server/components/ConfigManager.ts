@@ -5,6 +5,7 @@ import { Provider } from '../../schemas/provider.schema';
 import { parse } from 'jsonc-parser';
 import { logger } from "./Logger.js";
 import { getErrorMessage } from './Utils.js';
+import path from 'path'; // Import path module
 
 export class ConfigManager {
     private static instance: ConfigManager;
@@ -27,22 +28,45 @@ export class ConfigManager {
             return ConfigManager.getInstance();
         }
 
+        let validatedConfig: AppConfig;
+        let configLoaded = false;
+
         try {
           const rawData = await fs.readFile(configPath, "utf-8");
-          // Use jsonc-parser to parse JSONC (JSON with comments)
           const json = parse(rawData);
+          validatedConfig = AppConfigSchema.parse(json);
+          configLoaded = true;
+        } catch (error: any) {
+            logger.warn(`Failed to load or parse configuration file (${configPath}): ${getErrorMessage(error)}`);
+            logger.warn("Attempting to initialize with minimal valid configuration.");
 
-          // Validate the data on load. Throws a detailed error on failure.
-          const validatedConfig = AppConfigSchema.parse(json);
+            validatedConfig = { providers: [] }; // Minimal valid config
 
-          ConfigManager.instance = new ConfigManager(validatedConfig, configPath);
-          logger.info("Configuration loaded and validated successfully from: ", configPath);
-          return ConfigManager.instance;
-        } catch (error) {
-            logger.error(`Failed to initialize ConfigManager: ${getErrorMessage(error)}`);
-            // Exit the process if config is invalid or not found, as the app cannot run.
-            process.exit(1);
+            // If file not found, try to create it with default content
+            if (error.code === 'ENOENT') {
+                try {
+                    const defaultConfigContent = JSON.stringify(validatedConfig, null, 2);
+                    const dir = path.dirname(configPath);
+                    await fs.mkdir(dir, { recursive: true });
+                    await fs.writeFile(configPath, defaultConfigContent, 'utf-8');
+                    logger.info(`Created default configuration file at: ${configPath}`);
+                } catch (writeError) {
+                    logger.error(`Failed to create default config file: ${getErrorMessage(writeError)}`);
+                    // Continue with minimal config but warn if cannot write
+                }
+            } else {
+                // If it's a parsing error or other issue, just log and proceed with minimal config
+                logger.warn(`Existing config file is invalid. Proceeding with minimal configuration.`);
+            }
         }
+
+        ConfigManager.instance = new ConfigManager(validatedConfig, configPath);
+        if (configLoaded) {
+            logger.info("Configuration loaded and validated successfully from: ", configPath);
+        } else {
+            logger.info("ConfigManager initialized with fallback configuration.");
+        }
+        return ConfigManager.instance;
     }
 
     /**

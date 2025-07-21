@@ -13,7 +13,7 @@
   },
   "scripts": {
   "test": "jest",
-  "start": "node dist/server/index.js --config config.jsonc -l info --usage-db-path usage.db.json",
+  "start": "node dist/server/index.js --config config/config.jsonc -l info --usage-db-path config/usage.db.json",
   "test:coverage": "jest --coverage",
   "test:e2e": "jest --config jest.e2e.config.js",
   "clean": "rm -rf dist node_modules ui/dist ui/node_modules",

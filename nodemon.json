@@ -1,6 +1,6 @@
 {
   "watch": ["server", "schemas"],
   "ext": "ts,json",
-  "exec": "tsx server/index.ts --config config.jsonc --usage-db-path usage.db.json",
+  "exec": "tsx server/index.ts  --config config/config.jsonc -l debug --usage-db-path config/usage.db.json",
   "signal": "SIGTERM"
 }

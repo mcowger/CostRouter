@@ -9,3 +9,4 @@ config.jsonc
 copilot.data
 usage.db.json
 .DS_Store
+coverage/
