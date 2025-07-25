@@ -14,35 +14,35 @@ export class Router {
   private constructor(usageManager: UsageManager) {
     this.usageManager = usageManager;
   }
-  
+
   /**
    * Initializes the singleton Router.
    * This MUST be called after UsageManager is initialized.
    */
   public static initialize(): void {
-      if (Router.instance) {
-          logger.warn("Router has already been initialized.");
-          return;
-      }
-      const usageManager = UsageManager.getInstance();
-      Router.instance = new Router(usageManager);
+    if (Router.instance) {
+      logger.warn("Router has already been initialized.");
+      return;
+    }
+    const usageManager = UsageManager.getInstance();
+    Router.instance = new Router(usageManager);
   }
 
   /**
    * Returns the singleton instance of the Router.
    * Throws an error if it hasn't been initialized.
    */
-    public static getInstance(): Router {
-        if (!Router.instance) {
-            throw new Error("Router must be initialized before use.");
-        }
-        return Router.instance;
+  public static getInstance(): Router {
+    if (!Router.instance) {
+      throw new Error("Router must be initialized before use.");
     }
+    return Router.instance;
+  }
 
 
   private getProvidersForModel(modelname: string): { provider: Provider; model: Model }[] | undefined {
     logger.debug(`Searching for providers for model: ${modelname}`);
-    const providers: Provider[] = ConfigManager.getProviders();
+    const providers: Provider[] = ConfigManager.getInstance().getProviders();
     const matches: { provider: Provider; model: Model }[] = [];
 
     for (const provider of providers) {

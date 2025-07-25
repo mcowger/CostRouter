@@ -8,8 +8,10 @@ import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals
 // Mock dependencies before importing
 jest.mock('../components/ConfigManager.js', () => ({
   ConfigManager: {
-    getProviders: jest.fn()
-  }
+    getInstance: jest.fn().mockReturnValue({
+      getProviders: jest.fn(),
+    }),
+  },
 }));
 
 jest.mock('../components/UsageManager.js', () => ({
@@ -101,7 +103,9 @@ describe('Router - Basic Tests', () => {
     const { Router } = await import('../components/Router.js');
 
     // Setup mocks
-    (ConfigManager.getProviders as jest.MockedFunction<any>).mockReturnValue(mockProviders);
+    (ConfigManager.getInstance as jest.Mock).mockReturnValue({
+      getProviders: jest.fn().mockReturnValue(mockProviders),
+    });
     (UsageManager.getInstance as jest.MockedFunction<any>).mockReturnValue(mockUsageManager);
 
     // Initialize router
@@ -118,7 +122,9 @@ describe('Router - Basic Tests', () => {
     const { Router } = await import('../components/Router.js');
 
     // Setup mocks
-    (ConfigManager.getProviders as jest.MockedFunction<any>).mockReturnValue(mockProviders);
+    (ConfigManager.getInstance as jest.Mock).mockReturnValue({
+      getProviders: jest.fn().mockReturnValue(mockProviders),
+    });
     (UsageManager.getInstance as jest.MockedFunction<any>).mockReturnValue(mockUsageManager);
     mockUsageManager.isUnderLimit.mockResolvedValue(true);
 
@@ -148,9 +154,11 @@ describe('Router - Basic Tests', () => {
     const { Router } = await import('../components/Router.js');
 
     // Setup mocks
-    (ConfigManager.getProviders as jest.MockedFunction<any>).mockReturnValue(mockProviders);
+    (ConfigManager.getInstance as jest.Mock).mockReturnValue({
+      getProviders: jest.fn().mockReturnValue(mockProviders),
+    });
     (UsageManager.getInstance as jest.MockedFunction<any>).mockReturnValue(mockUsageManager);
-    
+
     // First provider is over limit, third is available
     mockUsageManager.isUnderLimit
       .mockResolvedValueOnce(false) // openai-provider over limit
@@ -178,7 +186,9 @@ describe('Router - Basic Tests', () => {
     const { Router } = await import('../components/Router.js');
 
     // Setup mocks
-    (ConfigManager.getProviders as jest.MockedFunction<any>).mockReturnValue(mockProviders);
+    (ConfigManager.getInstance as jest.Mock).mockReturnValue({
+      getProviders: jest.fn().mockReturnValue(mockProviders),
+    });
     (UsageManager.getInstance as jest.MockedFunction<any>).mockReturnValue(mockUsageManager);
 
     Router.initialize();
@@ -205,7 +215,9 @@ describe('Router - Basic Tests', () => {
     const { Router } = await import('../components/Router.js');
 
     // Setup mocks
-    (ConfigManager.getProviders as jest.MockedFunction<any>).mockReturnValue(mockProviders);
+    (ConfigManager.getInstance as jest.Mock).mockReturnValue({
+      getProviders: jest.fn().mockReturnValue(mockProviders),
+    });
     (UsageManager.getInstance as jest.MockedFunction<any>).mockReturnValue(mockUsageManager);
     mockUsageManager.isUnderLimit.mockResolvedValue(false);
 
@@ -246,7 +258,9 @@ describe('Router - Basic Tests', () => {
     ];
 
     // Setup mocks
-    (ConfigManager.getProviders as jest.MockedFunction<any>).mockReturnValue(providersWithMapping);
+    (ConfigManager.getInstance as jest.Mock).mockReturnValue({
+      getProviders: jest.fn().mockReturnValue(providersWithMapping),
+    });
     (UsageManager.getInstance as jest.MockedFunction<any>).mockReturnValue(mockUsageManager);
     mockUsageManager.isUnderLimit.mockResolvedValue(true);
 
@@ -283,7 +297,9 @@ describe('Router - Basic Tests', () => {
     ];
 
     // Setup mocks
-    (ConfigManager.getProviders as jest.MockedFunction<any>).mockReturnValue(providersWithMapping);
+    (ConfigManager.getInstance as jest.Mock).mockReturnValue({
+      getProviders: jest.fn().mockReturnValue(providersWithMapping),
+    });
     (UsageManager.getInstance as jest.MockedFunction<any>).mockReturnValue(mockUsageManager);
     mockUsageManager.isUnderLimit.mockResolvedValue(true);
 
@@ -310,7 +326,9 @@ describe('Router - Basic Tests', () => {
     const { Router } = await import('../components/Router.js');
 
     // Setup mocks
-    (ConfigManager.getProviders as jest.MockedFunction<any>).mockReturnValue(mockProviders);
+    (ConfigManager.getInstance as jest.Mock).mockReturnValue({
+      getProviders: jest.fn().mockReturnValue(mockProviders),
+    });
     (UsageManager.getInstance as jest.MockedFunction<any>).mockReturnValue(mockUsageManager);
 
     Router.initialize();

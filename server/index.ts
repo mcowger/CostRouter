@@ -99,7 +99,7 @@ async function main() {
 
   app.get("/v1/models", (_req, res) => {
     try {
-      const providers = ConfigManager.getProviders();
+      const providers = ConfigManager.getInstance().getProviders();
       const allModels = new Set<string>();
 
       for (const provider of providers) {
@@ -129,7 +129,7 @@ async function main() {
   // --- 6. Config API Routes ---
   app.get("/config/get", (_req, res) => {
     try {
-      const config = ConfigManager.getConfig();
+      const config = ConfigManager.getInstance().getConfig();
       res.json(config);
     } catch (error) {
       const message = getErrorMessage(error);
@@ -141,7 +141,7 @@ async function main() {
   app.post("/config/set", async (req, res) => {
     try {
       const newConfig = req.body;
-      await ConfigManager.updateConfig(newConfig);
+      await ConfigManager.getInstance().updateConfig(newConfig);
       res.json({ message: "Configuration updated successfully." });
     } catch (error) {
       const message = getErrorMessage(error);

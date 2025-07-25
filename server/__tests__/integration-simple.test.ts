@@ -37,8 +37,9 @@ jest.mock('ai-sdk-provider-claude-code', () => ({ createClaudeCode: jest.fn() })
 
 jest.mock('../components/ConfigManager.js', () => ({
   ConfigManager: {
-    getProviders: jest.fn()
-  }
+    getInstance: jest.fn(),
+    initialize: jest.fn(),
+  },
 }));
 
 jest.mock('../components/UsageManager.js', () => ({
@@ -81,8 +82,8 @@ describe('Integration Tests - Complete Request Flow', () => {
       type: 'openai',
       apiKey: 'test-openai-key',
       models: [
-        { 
-          name: 'gpt-3.5-turbo', 
+        {
+          name: 'gpt-3.5-turbo',
           mappedName: 'gpt-3.5-turbo',
           pricing: {
             inputCostPerMillionTokens: 1000,
@@ -174,7 +175,9 @@ describe('Integration Tests - Complete Request Flow', () => {
     const { createOpenAI } = await import('@ai-sdk/openai');
 
     // Setup mocks
-    (ConfigManager.getProviders as jest.MockedFunction<any>).mockReturnValue(mockProviders);
+    (ConfigManager.getInstance as jest.Mock).mockReturnValue({
+      getProviders: jest.fn().mockReturnValue(mockProviders),
+    });
     (UsageManager.getInstance as jest.MockedFunction<any>).mockReturnValue(mockUsageManager);
     mockUsageManager.isUnderLimit.mockResolvedValue(true);
     (generateText as jest.MockedFunction<typeof generateText>).mockResolvedValue(mockGenerateTextResult as any);
@@ -255,7 +258,9 @@ describe('Integration Tests - Complete Request Flow', () => {
     const { createOpenAI } = await import('@ai-sdk/openai');
 
     // Setup mocks
-    (ConfigManager.getProviders as jest.MockedFunction<any>).mockReturnValue(mockProviders);
+    (ConfigManager.getInstance as jest.Mock).mockReturnValue({
+      getProviders: jest.fn().mockReturnValue(mockProviders),
+    });
     (UsageManager.getInstance as jest.MockedFunction<any>).mockReturnValue(mockUsageManager);
     mockUsageManager.isUnderLimit.mockResolvedValue(true);
     (streamText as jest.MockedFunction<typeof streamText>).mockReturnValue(mockStreamTextResult as any);
@@ -307,7 +312,9 @@ describe('Integration Tests - Complete Request Flow', () => {
     const { createOpenAI } = await import('@ai-sdk/openai');
 
     // Setup mocks - primary provider is over limit, backup is available
-    (ConfigManager.getProviders as jest.MockedFunction<any>).mockReturnValue(mockProviders);
+    (ConfigManager.getInstance as jest.Mock).mockReturnValue({
+      getProviders: jest.fn().mockReturnValue(mockProviders),
+    });
     (UsageManager.getInstance as jest.MockedFunction<any>).mockReturnValue(mockUsageManager);
     mockUsageManager.isUnderLimit
       .mockResolvedValueOnce(false) // Primary over limit
@@ -355,7 +362,9 @@ describe('Integration Tests - Complete Request Flow', () => {
     const { Router } = await import('../components/Router.js');
 
     // Setup mocks
-    (ConfigManager.getProviders as jest.MockedFunction<any>).mockReturnValue(mockProviders);
+    (ConfigManager.getInstance as jest.Mock).mockReturnValue({
+      getProviders: jest.fn().mockReturnValue(mockProviders),
+    });
     (UsageManager.getInstance as jest.MockedFunction<any>).mockReturnValue(mockUsageManager);
 
     Router.initialize();
@@ -388,7 +397,9 @@ describe('Integration Tests - Complete Request Flow', () => {
     const { createOpenAI } = await import('@ai-sdk/openai');
 
     // Setup mocks
-    (ConfigManager.getProviders as jest.MockedFunction<any>).mockReturnValue(mockProviders);
+    (ConfigManager.getInstance as jest.Mock).mockReturnValue({
+      getProviders: jest.fn().mockReturnValue(mockProviders),
+    });
     (UsageManager.getInstance as jest.MockedFunction<any>).mockReturnValue(mockUsageManager);
     mockUsageManager.isUnderLimit.mockResolvedValue(true);
     (generateText as jest.MockedFunction<typeof generateText>).mockRejectedValue(new Error('API Error'));

@@ -61,7 +61,7 @@ export class UsageManager {
     UsageManager.instance.updateLimiters(); // Initial setup
 
     // Listen for config changes to dynamically update limiters
-    ConfigManager.events.on('configUpdated', (newConfig: AppConfig) => {
+    ConfigManager.getInstance().events.on('configUpdated', (newConfig: AppConfig) => {
       logger.info("Configuration has been updated. Checking for rate limiter changes...");
       UsageManager.getInstance().updateLimiters(newConfig);
     });
@@ -87,7 +87,7 @@ export class UsageManager {
    * without resetting the state of unchanged limiters.
    */
   public updateLimiters(config: AppConfig | null = null): void {
-    const newProviders = config ? config.providers : ConfigManager.getProviders();
+    const newProviders = config ? config.providers : ConfigManager.getInstance().getProviders();
     const newProviderIds = new Set(newProviders.map(p => p.id));
 
     const currentProviderIds = new Set<string>();
@@ -294,7 +294,7 @@ export class UsageManager {
    * Gets current usage data for all providers and models for the dashboard.
    */
   public async getCurrentUsageData(): Promise<UsageDashboardData> {
-    const providers = ConfigManager.getProviders();
+    const providers = ConfigManager.getInstance().getProviders();
     const providerUsages: ProviderUsage[] = [];
 
     // Define limit configurations with their units
