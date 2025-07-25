@@ -1,62 +1,47 @@
-import { promises as fs } from 'fs';
-import path from 'path';
 import EventEmitter from 'events';
+import { promises as fs } from 'fs';
 import { parse } from 'jsonc-parser';
 import { AppConfig, AppConfigSchema } from '../../schemas/appConfig.schema.js';
 import { Provider } from '../../schemas/provider.schema.js';
+import { IConfigManager, LimiterState } from './IConfigManager.js';
 import { logger } from './Logger.js';
-import { getErrorMessage } from './Utils.js';
-import { IConfigManager } from './IConfigManager.js';
 
 export class FileSystemConfigManager implements IConfigManager {
-  public events: EventEmitter = new EventEmitter();
-  private config: AppConfig;
-  private readonly configPath: string;
+  public events = new EventEmitter();
+  private config!: AppConfig;
+  private configPath: string;
 
-  private constructor(initialConfig: AppConfig, configPath: string) {
-    this.config = initialConfig;
+  private constructor(configPath: string) {
     this.configPath = configPath;
   }
 
-  public static async create(configPath: string): Promise<IConfigManager> {
-    let validatedConfig: AppConfig;
-    let configLoaded = false;
-
-    try {
-      const rawData = await fs.readFile(configPath, 'utf-8');
-      const json = parse(rawData);
-      validatedConfig = AppConfigSchema.parse(json);
-      configLoaded = true;
-    } catch (error: any) {
-      logger.warn(`Failed to load or parse configuration file (${configPath}): ${getErrorMessage(error)}`);
-      logger.warn('Attempting to initialize with minimal valid configuration.');
-
-      validatedConfig = { providers: [] }; // Minimal valid config
-
-      if (error.code === 'ENOENT') {
-        try {
-          const defaultConfigContent = JSON.stringify(validatedConfig, null, 2);
-          const dir = path.dirname(configPath);
-          await fs.mkdir(dir, { recursive: true });
-          await fs.writeFile(configPath, defaultConfigContent, 'utf-8');
-          logger.info(`Created default configuration file at: ${configPath}`);
-        } catch (writeError) {
-          logger.error(`Failed to create default config file: ${getErrorMessage(writeError)}`);
-        }
-      } else {
-        logger.warn(`Existing config file is invalid. Proceeding with minimal configuration.`);
-      }
-    }
-
-    const instance = new FileSystemConfigManager(validatedConfig, configPath);
-
-    if (configLoaded) {
-      logger.info('Configuration loaded and validated successfully from: ', configPath);
-    } else {
-      logger.info('FileSystemConfigManager initialized with fallback configuration.');
-    }
-
+  public static async initialize(configPath: string): Promise<FileSystemConfigManager> {
+    const instance = new FileSystemConfigManager(configPath);
+    await instance.loadConfig();
     return instance;
+  }
+
+  private async loadConfig(): Promise<void> {
+    logger.info(`Loading configuration from file: ${this.configPath}`);
+    try {
+      const rawData = await fs.readFile(this.configPath, 'utf8');
+      const parsedData = parse(rawData);
+      const validationResult = AppConfigSchema.safeParse(parsedData);
+
+      if (!validationResult.success) {
+        logger.error({
+          message: 'Invalid configuration file.',
+          errors: validationResult.error.flatten(),
+        });
+        throw new Error('Failed to validate configuration file.');
+      }
+
+      this.config = validationResult.data;
+      logger.info('Configuration loaded and validated successfully.');
+    } catch (error) {
+      logger.error(`Failed to load or parse configuration file: ${error}`);
+      throw error;
+    }
   }
 
   public getConfig(): AppConfig {
@@ -68,23 +53,45 @@ export class FileSystemConfigManager implements IConfigManager {
   }
 
   public async updateConfig(newConfig: AppConfig): Promise<void> {
-    const validatedConfig = AppConfigSchema.parse(newConfig);
-    this.config = validatedConfig;
-    this.events.emit('configUpdated', validatedConfig);
-    logger.info('Configuration updated in memory and event emitted.');
+    const validationResult = AppConfigSchema.safeParse(newConfig);
+    if (!validationResult.success) {
+      logger.error({
+        message: 'Invalid configuration provided for update.',
+        errors: validationResult.error.flatten(),
+      });
+      throw new Error('Failed to validate new configuration.');
+    }
 
-    const tempPath = `${this.configPath}.${Date.now()}.tmp`;
+    this.config = validationResult.data;
+    await this.saveConfig();
+    this.events.emit('config-updated', this.config);
+  }
+
+  private async saveConfig(): Promise<void> {
+    logger.info(`Saving configuration to file: ${this.configPath}`);
+    const tempPath = `${this.configPath}.tmp`;
     try {
-      await fs.writeFile(tempPath, JSON.stringify(validatedConfig, null, 2), 'utf-8');
+      await fs.writeFile(tempPath, JSON.stringify(this.config, null, 2), 'utf8');
       await fs.rename(tempPath, this.configPath);
-      logger.info('Configuration file updated successfully.');
+      logger.info('Configuration saved successfully.');
     } catch (error) {
+      logger.error(`Failed to save configuration: ${error}`);
+      // Attempt to clean up the temporary file if it exists
       try {
         await fs.unlink(tempPath);
       } catch (cleanupError) {
-        // Ignore cleanup errors
+        // Ignore errors during cleanup
       }
-      throw new Error(`Failed to write configuration to file: ${getErrorMessage(error)}`);
+      throw error;
     }
+  }
+  public async getLimiterState(): Promise<LimiterState | undefined> {
+    logger.warn('Limiter state persistence is not supported by FileSystemConfigManager. State will not be saved.');
+    return Promise.resolve(undefined);
+  }
+
+  public async storeLimiterState(): Promise<void> {
+    // No-op for file system-based config.
+    return Promise.resolve();
   }
 }

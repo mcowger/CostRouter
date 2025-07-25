@@ -1,5 +1,6 @@
 import { RateLimiterMemory, IRateLimiterOptions } from "rate-limiter-flexible";
 import { ConfigManager } from "./ConfigManager.js";
+import { LimiterState } from "./IConfigManager.js";
 import { Provider } from "../../schemas/provider.schema.js";
 import { Model } from "../../schemas/model.schema.js";
 import { AppConfig } from "../../schemas/appConfig.schema.js";
@@ -44,6 +45,7 @@ const COST_MULTIPLIER = 10000;
 export class UsageManager {
   private static instance: UsageManager;
   private limiters = new Map<string, RateLimiterMemory>();
+  private stateSaveInterval: NodeJS.Timeout | null = null;
 
   // Private constructor to enforce singleton pattern. Does not initialize.
   private constructor() { }
@@ -52,19 +54,26 @@ export class UsageManager {
    * Initializes the singleton UsageManager by creating and configuring rate limiters.
    * This MUST be called after ConfigManager is initialized.
    */
-  public static initialize(): void {
+  public static async initialize(): Promise<void> {
     if (UsageManager.instance) {
       logger.warn("UsageManager has already been initialized.");
       return;
     }
     UsageManager.instance = new UsageManager();
-    UsageManager.instance.updateLimiters(); // Initial setup
+    await UsageManager.instance.updateLimiters(); // Initial setup
 
     // Listen for config changes to dynamically update limiters
     ConfigManager.getInstance().events.on('configUpdated', (newConfig: AppConfig) => {
       logger.info("Configuration has been updated. Checking for rate limiter changes...");
       UsageManager.getInstance().updateLimiters(newConfig);
     });
+
+    // Periodically save the state of the limiters
+    UsageManager.instance.stateSaveInterval = setInterval(
+      () => UsageManager.instance.persistLimiterState(),
+      30000 // Save every 30 seconds
+    );
+    logger.info("UsageManager initialized and started periodic state saving.");
   }
 
   /**
@@ -86,7 +95,7 @@ export class UsageManager {
    * This function intelligently adds, removes, and updates limiters
    * without resetting the state of unchanged limiters.
    */
-  public updateLimiters(config: AppConfig | null = null): void {
+  public async updateLimiters(config: AppConfig | null = null): Promise<void> {
     const newProviders = config ? config.providers : ConfigManager.getInstance().getProviders();
     const newProviderIds = new Set(newProviders.map(p => p.id));
 
@@ -114,6 +123,9 @@ export class UsageManager {
       }
     }
     logger.info("Rate limiter update check complete.");
+
+    // After updating all limiters, load any persisted state.
+    await this.loadPersistedState();
   }
 
   /**
@@ -390,5 +402,70 @@ export class UsageManager {
       providers: providerUsages,
       timestamp: Date.now()
     };
+  }
+  private async loadPersistedState(): Promise<void> {
+    logger.info("Attempting to load persisted limiter state...");
+    try {
+      const state = await ConfigManager.getInstance().getLimiterState();
+      if (!state) {
+        logger.info("No persisted limiter state found.");
+        return;
+      }
+
+      let loadedCount = 0;
+      for (const limiterKey in state) {
+        const limiter = this.limiters.get(limiterKey);
+        const { points, ms } = state[limiterKey];
+        if (limiter) {
+          const consumeKey = limiterKey.substring(0, limiterKey.lastIndexOf('/'));
+          // Directly set the internal state. This is a "hack" but the only way.
+          (limiter as any)._memoryStorage.set(consumeKey, { points, ms });
+          loadedCount++;
+        }
+      }
+      if (loadedCount > 0) {
+        logger.info(`Successfully loaded persisted state for ${loadedCount} limiters.`);
+      }
+    } catch (error) {
+      logger.error(`Failed to load persisted limiter state: ${getErrorMessage(error)}`);
+    }
+  }
+
+  public async persistLimiterState(): Promise<void> {
+    logger.debug(`Persisting state for all ${this.limiters.size} limiters...`);
+    try {
+      const state: LimiterState = {};
+
+      for (const [limiterKey, limiter] of this.limiters.entries()) {
+        const memoryStorage = (limiter as any)._memoryStorage as Map<string, { points: number; ms: number }>;
+        const consumeKey = limiterKey.substring(0, limiterKey.lastIndexOf('/'));
+        const storedValue = memoryStorage.get(consumeKey);
+
+        if (storedValue) {
+          // If a consumption record exists, store its state.
+          state[limiterKey] = { points: storedValue.points, ms: storedValue.ms };
+        } else {
+          // If no consumption record exists, store a default zero-state.
+          state[limiterKey] = { points: 0, ms: 0 };
+        }
+      }
+
+      await ConfigManager.getInstance().storeLimiterState(state);
+      logger.info(`Successfully persisted state for ${this.limiters.size} limiters.`);
+
+    } catch (error) {
+      logger.error(`Failed to persist limiter state: ${getErrorMessage(error)}`);
+    }
+  }
+
+  public static async shutdown(): Promise<void> {
+    if (UsageManager.instance) {
+      logger.info("Shutting down UsageManager...");
+      if (UsageManager.instance.stateSaveInterval) {
+        clearInterval(UsageManager.instance.stateSaveInterval);
+      }
+      await UsageManager.instance.persistLimiterState();
+      logger.info("UsageManager has been shut down gracefully.");
+    }
   }
 }

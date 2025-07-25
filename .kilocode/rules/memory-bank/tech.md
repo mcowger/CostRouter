@@ -33,7 +33,7 @@ This document outlines the key technologies, libraries, and tools used in the LL
 
 ## Development & Build Tools
 
-*   **pnpm**: The primary package manager for the project, used with workspaces.
+*   **npm**: The primary package manager for the project, with a dedicated workspace for ui.
 *   **tsx**: A tool for executing TypeScript files directly, used for hot-reloading the development server.
 *   **Nodemon**: Monitors for any changes in your source and automatically restarts your server.
 *   **Concurrently**: A tool to run multiple commands concurrently.

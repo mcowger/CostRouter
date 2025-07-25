@@ -6,10 +6,19 @@ import { ProviderSchema } from '#schemas/provider.schema';
  * Defines the overall structure of the config.
  */
 export const AppConfigSchema = z.object({
-    /** A list of all configured LLM providers. */
-    providers: z.array(ProviderSchema).default([]),
+  /** A list of all configured LLM providers. */
+  providers: z.array(ProviderSchema).default([]),
 
-    // This structure allows for easy addition of other top-level keys in the future.
+  /**
+   * Stores the state of the rate limiters to persist usage data across restarts.
+   * The key is the limiter's identifier (e.g., "providerId/modelName/limitType"),
+   * and the value is an object containing the consumed points and the timestamp
+   * of the first request in the current window.
+   */
+  limiterState: z.record(z.object({
+    points: z.number().int().nonnegative(),
+    ms: z.number().int().nonnegative(),
+  })).optional(),
 });
 
 /**

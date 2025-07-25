@@ -1,37 +1,59 @@
-// src/components/ConfigManager.ts
-import { logger } from "./Logger.js";
+import { IConfigManager, LimiterState } from './IConfigManager.js';
 import { FileSystemConfigManager } from './FileSystemConfigManager.js';
-import { IConfigManager } from './IConfigManager.js';
+import { DatabaseConfigManager } from './DatabaseConfigManager.js';
+import { AppConfig } from '../../schemas/appConfig.schema.js';
+import { Provider } from '../../schemas/provider.schema.js';
+import EventEmitter from 'events';
 
-export class ConfigManager {
+type InitializeParams = {
+  filePath?: string;
+  databasePath?: string;
+};
+
+export class ConfigManager implements IConfigManager {
   private static instance: IConfigManager;
+  public events: EventEmitter;
 
-  // Private constructor to prevent instantiation
-  private constructor() { }
-
-  /**
-   * Initializes the singleton ConfigManager by creating a provider-specific instance.
-   * This should be called once at application startup.
-   */
-  public static async initialize(configPath: string): Promise<void> {
-    if (ConfigManager.instance) {
-      logger.warn("ConfigManager has already been initialized.");
-      return;
-    }
-    // For now, we are hardcoding the FileSystemConfigManager.
-    // In the future, we could have a factory that decides which provider to use.
-    ConfigManager.instance = await FileSystemConfigManager.create(configPath);
-    logger.info("ConfigManager initialized successfully.");
+  private constructor(manager: IConfigManager) {
+    ConfigManager.instance = manager;
+    this.events = manager.events;
   }
 
-  /**
-   * Returns the singleton instance of the ConfigManager.
-   * Throws an error if it hasn't been initialized.
-   */
-  public static getInstance(): IConfigManager {
-    if (!ConfigManager.instance) {
-      throw new Error("ConfigManager must be initialized before use.");
+  public static async initialize(params: InitializeParams): Promise<void> {
+    if (params.filePath) {
+      const manager = await FileSystemConfigManager.initialize(params.filePath);
+      new ConfigManager(manager);
+    } else if (params.databasePath) {
+      const manager = await DatabaseConfigManager.initialize(params.databasePath);
+      new ConfigManager(manager);
+    } else {
+      throw new Error('Either filePath or databasePath must be provided for initialization.');
     }
-    return ConfigManager.instance;
+  }
+
+  public static getInstance(): ConfigManager {
+    if (!ConfigManager.instance) {
+      throw new Error('ConfigManager has not been initialized. Call initialize() first.');
+    }
+    return new ConfigManager(ConfigManager.instance);
+  }
+
+  public getConfig(): AppConfig {
+    return ConfigManager.instance.getConfig();
+  }
+
+  public getProviders(): Provider[] {
+    return ConfigManager.instance.getProviders();
+  }
+
+  public updateConfig(newConfig: AppConfig): Promise<void> {
+    return ConfigManager.instance.updateConfig(newConfig);
+  }
+  public getLimiterState(): Promise<LimiterState | undefined> {
+    return ConfigManager.instance.getLimiterState();
+  }
+
+  public storeLimiterState(state: LimiterState): Promise<void> {
+    return ConfigManager.instance.storeLimiterState(state);
   }
 }

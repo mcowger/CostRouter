@@ -15,11 +15,24 @@ import { getErrorMessage } from "./components/Utils.js";
 async function main() {
   // --- 1. Argument Parsing ---
   const argv = await yargs(hideBin(process.argv))
-    .option("config", {
-      alias: "c",
+    .option("config-file", {
+      alias: "cf",
       type: "string",
       description: "Path to the configuration JSON(C) file",
-      demandOption: true,
+    })
+    .option("config-database", {
+      alias: "cd",
+      type: "string",
+      description: "Path to the configuration LowDB JSON database file",
+    })
+    .check((argv) => {
+      if (!argv.configFile && !argv.configDatabase) {
+        throw new Error("You must provide either --config-file or --config-database");
+      }
+      if (argv.configFile && argv.configDatabase) {
+        throw new Error("You must provide either --config-file or --config-database, but not both");
+      }
+      return true;
     })
     .option("loglevel", {
       alias: "l",
@@ -47,9 +60,13 @@ async function main() {
   logger.level = argv.loglevel;
 
   // --- 2. Initialize Singletons in Order ---
-  await ConfigManager.initialize(argv.config);
-  await PriceData.initialize();
-  UsageManager.initialize();
+  if (argv.configFile) {
+    await ConfigManager.initialize({ filePath: argv.configFile });
+  } else if (argv.configDatabase) {
+    await ConfigManager.initialize({ databasePath: argv.configDatabase });
+  }
+  PriceData.initialize();
+  await UsageManager.initialize();
   Router.initialize();
 
   if (argv.usageDbPath) {
@@ -242,9 +259,22 @@ async function main() {
 
 
   const PORT = process.env.PORT || 3000;
-  app.listen(PORT, () => {
+  const server = app.listen(PORT, () => {
     logger.info(`LLM Gateway listening on port ${PORT}`);
   });
+
+  // --- Graceful Shutdown ---
+  const gracefulShutdown = async (signal: string) => {
+    logger.info(`Received ${signal}. Shutting down gracefully...`);
+    server.close(async () => {
+      logger.info("HTTP server closed.");
+      await UsageManager.shutdown();
+      process.exit(0);
+    });
+  };
+
+  process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+  process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 }
 
 // Run the main function and catch any top-level errors.
