@@ -15,24 +15,11 @@ import { getErrorMessage } from "./components/Utils.js";
 async function main() {
   // --- 1. Argument Parsing ---
   const argv = await yargs(hideBin(process.argv))
-    .option("config-file", {
-      alias: "cf",
-      type: "string",
-      description: "Path to the configuration JSON(C) file",
-    })
     .option("config-database", {
       alias: "cd",
       type: "string",
       description: "Path to the configuration LowDB JSON database file",
-    })
-    .check((argv) => {
-      if (!argv.configFile && !argv.configDatabase) {
-        throw new Error("You must provide either --config-file or --config-database");
-      }
-      if (argv.configFile && argv.configDatabase) {
-        throw new Error("You must provide either --config-file or --config-database, but not both");
-      }
-      return true;
+      required: true,
     })
     .option("loglevel", {
       alias: "l",
@@ -60,11 +47,7 @@ async function main() {
   logger.level = argv.loglevel;
 
   // --- 2. Initialize Singletons in Order ---
-  if (argv.configFile) {
-    await ConfigManager.initialize({ filePath: argv.configFile });
-  } else if (argv.configDatabase) {
-    await ConfigManager.initialize({ databasePath: argv.configDatabase });
-  }
+  await ConfigManager.initialize({ databasePath: argv.configDatabase as string });
   PriceData.initialize();
   await UsageManager.initialize();
   Router.initialize();
@@ -84,7 +67,8 @@ async function main() {
   // --- 3. Get Instances ---
   const router = Router.getInstance();
   const usageManager = UsageManager.getInstance();
-  const executor = new UnifiedExecutor(usageManager);
+  UnifiedExecutor.initialize(usageManager);
+  const executor = UnifiedExecutor.getInstance();
 
   // --- 3. Express Server Setup ---
   // Initialize Express application

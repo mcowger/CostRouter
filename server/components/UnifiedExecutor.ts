@@ -32,7 +32,7 @@ import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 // which nothing else does.  For now, treat it as openai-compatible
 import { createOllama, OllamaProviderSettings } from "ollama-ai-provider";
 import { createQwen, QwenProviderSettings } from "qwen-ai-provider";
-import { createGeminiProvider  } from "ai-sdk-provider-gemini-cli"
+import { createGeminiProvider } from "ai-sdk-provider-gemini-cli"
 //import {  ClaudeCodeProviderSettings, createClaudeCode } from "ai-sdk-provider-claude-code"
 
 /**
@@ -40,12 +40,13 @@ import { createGeminiProvider  } from "ai-sdk-provider-gemini-cli"
  * Replaces the previous provider-specific executor classes.
  */
 export class UnifiedExecutor {
+  private static instance: UnifiedExecutor;
   private usageManager: UsageManager;
   private providerInstances: Map<string, any> = new Map();
 
   // Map of provider types to their factory functions
   // Adding new providers is as simple as adding a new entry here!
-  
+
   private static readonly PROVIDER_FACTORIES = new Map<string, (config: Provider) => any>([
     // Core AI SDK providers
     ["openai", (config: OpenAIProviderSettings) => createOpenAI({
@@ -97,7 +98,7 @@ export class UnifiedExecutor {
     ["ollama", (config: OllamaProviderSettings) => createOllama({
       baseURL: config.baseURL || "http://localhost:11434",
     })],
-    ["gemini-cli", (_config: any) => createGeminiProvider({ 
+    ["gemini-cli", (_config: any) => createGeminiProvider({
       authType: "oauth-personal"
     })],
     // ["claude-code", (_config: ClaudeCodeProviderSettings) => createClaudeCode({
@@ -123,8 +124,21 @@ export class UnifiedExecutor {
     })],
   ]);
 
-  constructor(usageManager: UsageManager) {
+  private constructor(usageManager: UsageManager) {
     this.usageManager = usageManager;
+  }
+
+  public static initialize(usageManager: UsageManager): void {
+    if (!UnifiedExecutor.instance) {
+      UnifiedExecutor.instance = new UnifiedExecutor(usageManager);
+    }
+  }
+
+  public static getInstance(): UnifiedExecutor {
+    if (!UnifiedExecutor.instance) {
+      throw new Error('UnifiedExecutor has not been initialized. Call initialize() first.');
+    }
+    return UnifiedExecutor.instance;
   }
 
   /**

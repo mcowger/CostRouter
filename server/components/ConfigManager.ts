@@ -1,13 +1,11 @@
 import { IConfigManager, LimiterState } from './IConfigManager.js';
-import { FileSystemConfigManager } from './FileSystemConfigManager.js';
 import { DatabaseConfigManager } from './DatabaseConfigManager.js';
 import { AppConfig } from '../../schemas/appConfig.schema.js';
 import { Provider } from '../../schemas/provider.schema.js';
 import EventEmitter from 'events';
 
 type InitializeParams = {
-  filePath?: string;
-  databasePath?: string;
+  databasePath: string;
 };
 
 export class ConfigManager implements IConfigManager {
@@ -20,15 +18,8 @@ export class ConfigManager implements IConfigManager {
   }
 
   public static async initialize(params: InitializeParams): Promise<void> {
-    if (params.filePath) {
-      const manager = await FileSystemConfigManager.initialize(params.filePath);
-      new ConfigManager(manager);
-    } else if (params.databasePath) {
-      const manager = await DatabaseConfigManager.initialize(params.databasePath);
-      new ConfigManager(manager);
-    } else {
-      throw new Error('Either filePath or databasePath must be provided for initialization.');
-    }
+    const manager = await DatabaseConfigManager.initialize(params.databasePath);
+    new ConfigManager(manager);
   }
 
   public static getInstance(): ConfigManager {

@@ -159,18 +159,17 @@ describe('Integration Tests - Complete Request Flow', () => {
   });
 
   afterEach(() => {
-    // Reset singletons
     const Router = require('../components/Router.js').Router;
-    const Executor = require('../components/Executor.js').Executor;
+    const UnifiedExecutor = require('../components/UnifiedExecutor.js').UnifiedExecutor;
     (Router as any).instance = null;
-    (Executor as any).instance = null;
+    (UnifiedExecutor as any).instance = null;
   });
 
   it('should handle complete non-streaming request flow', async () => {
     const { ConfigManager } = await import('../components/ConfigManager.js');
     const { UsageManager } = await import('../components/UsageManager.js');
     const { Router } = await import('../components/Router.js');
-    const { Executor } = await import('../components/Executor.js');
+    const { UnifiedExecutor } = await import('../components/UnifiedExecutor.js');
     const { generateText } = await import('ai');
     const { createOpenAI } = await import('@ai-sdk/openai');
 
@@ -179,17 +178,17 @@ describe('Integration Tests - Complete Request Flow', () => {
       getProviders: jest.fn().mockReturnValue(mockProviders),
     });
     (UsageManager.getInstance as jest.MockedFunction<any>).mockReturnValue(mockUsageManager);
-    mockUsageManager.isUnderLimit.mockResolvedValue(true);
+    mockUsageManager.isUnderLimit.mockResolvedValue(true as never);
     (generateText as jest.MockedFunction<typeof generateText>).mockResolvedValue(mockGenerateTextResult as any);
-    (createOpenAI as jest.MockedFunction<typeof createOpenAI>).mockReturnValue((modelName: string) => ({
-      modelId: modelName,
-      provider: 'openai'
-    }) as any);
+    (createOpenAI as jest.MockedFunction<typeof createOpenAI>).mockImplementation(
+      () => jest.fn((modelId: string) => ({ modelId, provider: 'openai' })) as any
+    );
 
     // Initialize components
     Router.initialize();
+    UnifiedExecutor.initialize(mockUsageManager as any);
     const router = Router.getInstance();
-    const executor = Executor.getInstance(mockUsageManager as any);
+    const executor = UnifiedExecutor.getInstance();
 
     const req = createMockRequest({
       body: {
@@ -253,7 +252,7 @@ describe('Integration Tests - Complete Request Flow', () => {
     const { ConfigManager } = await import('../components/ConfigManager.js');
     const { UsageManager } = await import('../components/UsageManager.js');
     const { Router } = await import('../components/Router.js');
-    const { Executor } = await import('../components/Executor.js');
+    const { UnifiedExecutor } = await import('../components/UnifiedExecutor.js');
     const { streamText } = await import('ai');
     const { createOpenAI } = await import('@ai-sdk/openai');
 
@@ -262,16 +261,16 @@ describe('Integration Tests - Complete Request Flow', () => {
       getProviders: jest.fn().mockReturnValue(mockProviders),
     });
     (UsageManager.getInstance as jest.MockedFunction<any>).mockReturnValue(mockUsageManager);
-    mockUsageManager.isUnderLimit.mockResolvedValue(true);
+    mockUsageManager.isUnderLimit.mockResolvedValue(true as never);
     (streamText as jest.MockedFunction<typeof streamText>).mockReturnValue(mockStreamTextResult as any);
-    (createOpenAI as jest.MockedFunction<typeof createOpenAI>).mockReturnValue((modelName: string) => ({
-      modelId: modelName,
-      provider: 'openai'
-    }) as any);
+    (createOpenAI as jest.MockedFunction<typeof createOpenAI>).mockImplementation(
+      () => jest.fn((modelId: string) => ({ modelId, provider: 'openai' })) as any
+    );
 
     Router.initialize();
+    UnifiedExecutor.initialize(mockUsageManager as any);
     const router = Router.getInstance();
-    const executor = Executor.getInstance(mockUsageManager as any);
+    const executor = UnifiedExecutor.getInstance();
 
     const req = createMockRequest({
       body: {
@@ -307,7 +306,7 @@ describe('Integration Tests - Complete Request Flow', () => {
     const { ConfigManager } = await import('../components/ConfigManager.js');
     const { UsageManager } = await import('../components/UsageManager.js');
     const { Router } = await import('../components/Router.js');
-    const { Executor } = await import('../components/Executor.js');
+    const { UnifiedExecutor } = await import('../components/UnifiedExecutor.js');
     const { generateText } = await import('ai');
     const { createOpenAI } = await import('@ai-sdk/openai');
 
@@ -317,17 +316,17 @@ describe('Integration Tests - Complete Request Flow', () => {
     });
     (UsageManager.getInstance as jest.MockedFunction<any>).mockReturnValue(mockUsageManager);
     mockUsageManager.isUnderLimit
-      .mockResolvedValueOnce(false) // Primary over limit
-      .mockResolvedValueOnce(true);  // Backup available
+      .mockResolvedValueOnce(false as never) // Primary over limit
+      .mockResolvedValueOnce(true as never);  // Backup available
     (generateText as jest.MockedFunction<typeof generateText>).mockResolvedValue(mockGenerateTextResult as any);
-    (createOpenAI as jest.MockedFunction<typeof createOpenAI>).mockReturnValue((modelName: string) => ({
-      modelId: modelName,
-      provider: 'openai'
-    }) as any);
+    (createOpenAI as jest.MockedFunction<typeof createOpenAI>).mockImplementation(
+      () => jest.fn((modelId: string) => ({ modelId, provider: 'openai' })) as any
+    );
 
     Router.initialize();
+    UnifiedExecutor.initialize(mockUsageManager as any);
     const router = Router.getInstance();
-    const executor = Executor.getInstance(mockUsageManager as any);
+    const executor = UnifiedExecutor.getInstance();
 
     const req = createMockRequest({
       body: {
@@ -392,7 +391,7 @@ describe('Integration Tests - Complete Request Flow', () => {
     const { ConfigManager } = await import('../components/ConfigManager.js');
     const { UsageManager } = await import('../components/UsageManager.js');
     const { Router } = await import('../components/Router.js');
-    const { Executor } = await import('../components/Executor.js');
+    const { UnifiedExecutor } = await import('../components/UnifiedExecutor.js');
     const { generateText } = await import('ai');
     const { createOpenAI } = await import('@ai-sdk/openai');
 
@@ -401,16 +400,16 @@ describe('Integration Tests - Complete Request Flow', () => {
       getProviders: jest.fn().mockReturnValue(mockProviders),
     });
     (UsageManager.getInstance as jest.MockedFunction<any>).mockReturnValue(mockUsageManager);
-    mockUsageManager.isUnderLimit.mockResolvedValue(true);
+    mockUsageManager.isUnderLimit.mockResolvedValue(true as never);
     (generateText as jest.MockedFunction<typeof generateText>).mockRejectedValue(new Error('API Error'));
-    (createOpenAI as jest.MockedFunction<typeof createOpenAI>).mockReturnValue((modelName: string) => ({
-      modelId: modelName,
-      provider: 'openai'
-    }) as any);
+    (createOpenAI as jest.MockedFunction<typeof createOpenAI>).mockImplementation(
+      () => jest.fn((modelId: string) => ({ modelId, provider: 'openai' })) as any
+    );
 
     Router.initialize();
+    UnifiedExecutor.initialize(mockUsageManager as any);
     const router = Router.getInstance();
-    const executor = Executor.getInstance(mockUsageManager as any);
+    const executor = UnifiedExecutor.getInstance();
 
     const req = createMockRequest();
     const res = createMockResponse();

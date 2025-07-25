@@ -11,10 +11,10 @@ Your primary goal is to help build an intelligent LLM Gateway. Adherence to the 
 
 ### 2. Component Design & Implementation
 
-* **`ConfigManager.ts`:** A singleton class responsible for loading the config file from disk, validating it with Zod, holding it in memory, and providing a safe way to update and save it. it is relying on `fs/promises` and an atomic save pattern.
+* **`ConfigManager.ts`:** A singleton class responsible for loading the config from a database, validating it with Zod, holding it in memory, and providing a safe way to update and save it.
   * It includes primarily a list of Provider objects.
   * In the future it should be extensible to other options.
-  * On startup, read the specified file from the command line arguments from the filesystem using `fs/promises`.  The location of the configuration file should be a required argument to the application.  If it is not provided, the application should exit.
+  * On startup, read the specified database from the command line arguments. The location of the configuration database should be a required argument to the application. If it is not provided, the application should exit.
   * Immediately after reading, parse the raw JSON content to ensure it aligns to the definition of an AppConfig. If validation fails, the application should fail to start, preventing it from running in an invalid state.
   * Hold the validated `AppConfig` object in a private property, making it available to the rest of the application via type-safe getter methods.
   * The AppConfig object should be a list of Provider objects to start with.
@@ -52,7 +52,7 @@ The system must be implemented as a request-processing pipeline. For an incoming
 
 * **Web Framework:** **`Express.js`**
 * **AI SDK:** **`ai-sdk/openai-compatible`** and **`ai-sdk`**
-* **Filesystem I/O:** **`fs/promises`** for all file operations.
+* **Database:** **`lowdb`** for all configuration and usage data.
 * **Usage Tracking & Enforcement:** **`rate-limiter-flexible`**
 * **Validation:** **`zod`**
 
