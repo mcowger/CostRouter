@@ -1,10 +1,10 @@
 import EventEmitter from 'events';
 import { Low } from 'lowdb';
 import { JSONFile } from 'lowdb/node';
-import { AppConfig, AppConfigSchema } from '../../schemas/appConfig.schema.js';
-import { Provider } from '../../schemas/provider.schema.js';
+import { AppConfig, AppConfigSchema } from '../../../schemas/appConfig.schema.js';
+import { Provider } from '../../../schemas/provider.schema.js';
 import { IConfigManager, LimiterState } from './IConfigManager.js';
-import { logger } from './Logger.js';
+import { logger } from '../Logger.js';
 
 /**
  * Manages application configuration using a LowDB JSON file.

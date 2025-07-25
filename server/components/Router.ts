@@ -1,6 +1,6 @@
 import { Provider } from "../../schemas/provider.schema.js";
 import { Model } from "../../schemas/model.schema.js";
-import { ConfigManager } from "./ConfigManager.js";
+import { ConfigManager } from "./config/ConfigManager.js";
 import { logger } from "./Logger.js";
 import { Request, Response, NextFunction } from "express";
 import { UsageManager } from "./UsageManager.js";

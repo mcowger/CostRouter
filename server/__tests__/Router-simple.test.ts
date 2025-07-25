@@ -6,7 +6,7 @@
 import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
 
 // Mock dependencies before importing
-jest.mock('../components/ConfigManager.js', () => ({
+jest.mock('../components/config/ConfigManager.js', () => ({
   ConfigManager: {
     getInstance: jest.fn().mockReturnValue({
       getProviders: jest.fn(),
@@ -63,7 +63,7 @@ describe('Router - Basic Tests', () => {
 
   // Mock UsageManager instance
   const mockUsageManager = {
-    isUnderLimit: jest.fn(),
+    isUnderLimit: jest.fn<(providerId: string, modelName: string) => Promise<boolean>>(),
     consume: jest.fn(),
     getCurrentUsage: jest.fn()
   };
@@ -98,7 +98,7 @@ describe('Router - Basic Tests', () => {
   });
 
   it('should initialize router correctly', async () => {
-    const { ConfigManager } = await import('../components/ConfigManager.js');
+    const { ConfigManager } = await import('../components/config/ConfigManager.js');
     const { UsageManager } = await import('../components/UsageManager.js');
     const { Router } = await import('../components/Router.js');
 
@@ -117,7 +117,7 @@ describe('Router - Basic Tests', () => {
   });
 
   it('should select an available provider for requested model', async () => {
-    const { ConfigManager } = await import('../components/ConfigManager.js');
+    const { ConfigManager } = await import('../components/config/ConfigManager.js');
     const { UsageManager } = await import('../components/UsageManager.js');
     const { Router } = await import('../components/Router.js');
 
@@ -149,7 +149,7 @@ describe('Router - Basic Tests', () => {
   });
 
   it('should skip providers that are over limit and select next available', async () => {
-    const { ConfigManager } = await import('../components/ConfigManager.js');
+    const { ConfigManager } = await import('../components/config/ConfigManager.js');
     const { UsageManager } = await import('../components/UsageManager.js');
     const { Router } = await import('../components/Router.js');
 
@@ -181,7 +181,7 @@ describe('Router - Basic Tests', () => {
   });
 
   it('should return 404 when no provider supports the requested model', async () => {
-    const { ConfigManager } = await import('../components/ConfigManager.js');
+    const { ConfigManager } = await import('../components/config/ConfigManager.js');
     const { UsageManager } = await import('../components/UsageManager.js');
     const { Router } = await import('../components/Router.js');
 
@@ -210,7 +210,7 @@ describe('Router - Basic Tests', () => {
   });
 
   it('should return 503 when all providers for model are over limit', async () => {
-    const { ConfigManager } = await import('../components/ConfigManager.js');
+    const { ConfigManager } = await import('../components/config/ConfigManager.js');
     const { UsageManager } = await import('../components/UsageManager.js');
     const { Router } = await import('../components/Router.js');
 
@@ -240,7 +240,7 @@ describe('Router - Basic Tests', () => {
   });
 
   it('should handle mapped model names correctly', async () => {
-    const { ConfigManager } = await import('../components/ConfigManager.js');
+    const { ConfigManager } = await import('../components/config/ConfigManager.js');
     const { UsageManager } = await import('../components/UsageManager.js');
     const { Router } = await import('../components/Router.js');
 
@@ -281,7 +281,7 @@ describe('Router - Basic Tests', () => {
   });
 
   it('should use real model name for rate limiting checks', async () => {
-    const { ConfigManager } = await import('../components/ConfigManager.js');
+    const { ConfigManager } = await import('../components/config/ConfigManager.js');
     const { UsageManager } = await import('../components/UsageManager.js');
     const { Router } = await import('../components/Router.js');
 
@@ -321,7 +321,7 @@ describe('Router - Basic Tests', () => {
   });
 
   it('should handle missing model in request body', async () => {
-    const { ConfigManager } = await import('../components/ConfigManager.js');
+    const { ConfigManager } = await import('../components/config/ConfigManager.js');
     const { UsageManager } = await import('../components/UsageManager.js');
     const { Router } = await import('../components/Router.js');
 

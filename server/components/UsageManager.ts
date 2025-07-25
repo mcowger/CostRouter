@@ -1,6 +1,6 @@
 import { RateLimiterMemory, IRateLimiterOptions } from "rate-limiter-flexible";
-import { ConfigManager } from "./ConfigManager.js";
-import { LimiterState } from "./IConfigManager.js";
+import { ConfigManager } from "./config/ConfigManager.js";
+import { LimiterState } from "./config/IConfigManager.js";
 import { Provider } from "../../schemas/provider.schema.js";
 import { Model } from "../../schemas/model.schema.js";
 import { AppConfig } from "../../schemas/appConfig.schema.js";

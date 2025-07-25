@@ -3,7 +3,7 @@ import cors from "cors";
 import yargs from "yargs/yargs";
 import { hideBin } from "yargs/helpers";
 import path from 'path';
-import { ConfigManager } from "./components/ConfigManager.js";
+import { ConfigManager } from "./components/config/ConfigManager.js";
 import { PriceData } from "./components/PriceData.js";
 import { Router } from "./components/Router.js";
 import { UsageManager } from "./components/UsageManager.js";

@@ -35,7 +35,7 @@ jest.mock('qwen-ai-provider', () => ({ createQwen: jest.fn() }));
 jest.mock('ai-sdk-provider-gemini-cli', () => ({ createGeminiProvider: jest.fn() }));
 jest.mock('ai-sdk-provider-claude-code', () => ({ createClaudeCode: jest.fn() }));
 
-jest.mock('../components/ConfigManager.js', () => ({
+jest.mock('../components/config/ConfigManager.js', () => ({
   ConfigManager: {
     getInstance: jest.fn(),
     initialize: jest.fn(),
@@ -166,7 +166,7 @@ describe('Integration Tests - Complete Request Flow', () => {
   });
 
   it('should handle complete non-streaming request flow', async () => {
-    const { ConfigManager } = await import('../components/ConfigManager.js');
+    const { ConfigManager } = await import('../components/config/ConfigManager.js');
     const { UsageManager } = await import('../components/UsageManager.js');
     const { Router } = await import('../components/Router.js');
     const { UnifiedExecutor } = await import('../components/UnifiedExecutor.js');
@@ -249,7 +249,7 @@ describe('Integration Tests - Complete Request Flow', () => {
   });
 
   it('should handle complete streaming request flow', async () => {
-    const { ConfigManager } = await import('../components/ConfigManager.js');
+    const { ConfigManager } = await import('../components/config/ConfigManager.js');
     const { UsageManager } = await import('../components/UsageManager.js');
     const { Router } = await import('../components/Router.js');
     const { UnifiedExecutor } = await import('../components/UnifiedExecutor.js');
@@ -303,7 +303,7 @@ describe('Integration Tests - Complete Request Flow', () => {
   });
 
   it('should handle provider failover correctly', async () => {
-    const { ConfigManager } = await import('../components/ConfigManager.js');
+    const { ConfigManager } = await import('../components/config/ConfigManager.js');
     const { UsageManager } = await import('../components/UsageManager.js');
     const { Router } = await import('../components/Router.js');
     const { UnifiedExecutor } = await import('../components/UnifiedExecutor.js');
@@ -356,7 +356,7 @@ describe('Integration Tests - Complete Request Flow', () => {
   });
 
   it('should handle model not found error', async () => {
-    const { ConfigManager } = await import('../components/ConfigManager.js');
+    const { ConfigManager } = await import('../components/config/ConfigManager.js');
     const { UsageManager } = await import('../components/UsageManager.js');
     const { Router } = await import('../components/Router.js');
 
@@ -388,7 +388,7 @@ describe('Integration Tests - Complete Request Flow', () => {
   });
 
   it('should handle AI API errors gracefully', async () => {
-    const { ConfigManager } = await import('../components/ConfigManager.js');
+    const { ConfigManager } = await import('../components/config/ConfigManager.js');
     const { UsageManager } = await import('../components/UsageManager.js');
     const { Router } = await import('../components/Router.js');
     const { UnifiedExecutor } = await import('../components/UnifiedExecutor.js');
