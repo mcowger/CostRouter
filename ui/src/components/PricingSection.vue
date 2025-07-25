@@ -21,10 +21,10 @@
         <label>{{ field.label }}:</label>
         <input
           type="number"
-          :value="pricing[field.key] || ''"
-          @input="updatePricing(field.key, $event)"
+          v-model="localPricing[field.key]"
+          @blur="emitUpdate"
           class="form-input"
-          :placeholder="pricing[field.key] !== undefined ? '' : 'Not Configured'"
+          :placeholder="localPricing[field.key] !== undefined ? '' : 'Not Configured'"
           step="0.0001"
           min="0"
         />
@@ -57,6 +57,21 @@ const emit = defineEmits<{
   (e: 'update', pricing: Pricing): void;
 }>();
 
+import { reactive, watch } from 'vue';
+
+const localPricing = reactive({ ...props.pricing });
+
+watch(
+  () => props.pricing,
+  (newVal) => {
+    Object.assign(localPricing, newVal ?? {});
+  }
+);
+
+const emitUpdate = () => {
+  emit('update', { ...localPricing });
+};
+
 // --- FIXED: Define the shape of the field objects
 interface FieldDefinition {
   label: string;
@@ -71,20 +86,6 @@ const pricingFields: FieldDefinition[] = [
 ];
 
 // --- FIXED: Refactor function to accept the event and be fully type-safe
-const updatePricing = (key: keyof Pricing, event: Event): void => {
-  const target = event.target as HTMLInputElement;
-  const value = target.value;
-
-  if (!props.pricing) return;
-
-  const updatedPricing = { ...props.pricing };
-  const numValue = parseFloat(value);
-
-  // No type assertion needed here anymore
-  updatedPricing[key] = isNaN(numValue) ? undefined : numValue;
-
-  emit('update', updatedPricing);
-};
 </script>
 
 <style scoped>
@@ -192,3 +193,4 @@ const updatePricing = (key: keyof Pricing, event: Event): void => {
   line-height: 1;
 }
 </style>
+

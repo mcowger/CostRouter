@@ -101,7 +101,12 @@ const removeProvider = (index: number): void => {
 };
 
 const updateProvider = (index: number, provider: Provider): void => {
-  config.value.providers[index] = provider;
+  // Ensure reactivity by replacing the array
+  config.value.providers = [
+    ...config.value.providers.slice(0, index),
+    provider,
+    ...config.value.providers.slice(index + 1)
+  ];
 };
 
 onMounted(async () => {
