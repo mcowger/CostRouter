@@ -26,6 +26,8 @@ The gateway is paired with a comprehensive **web interface** for real-time monit
 
 *   **Unified API**: Simplifies client-side integration by providing a single, consistent OpenAI-compatible endpoint (`/v1/chat/completions` and `/v1/models`) for all backend providers.
 
+*   **GitHub Copilot Integration**: Includes a `CopilotTokenManager` for fetching and managing GitHub Copilot authentication tokens, enabling seamless integration with Copilot-powered models.
+
 ## Key Goals & User Experience
 
 *   **Resilience & Failover**: If a primary LLM provider is unavailable or has reached its rate limit, the gateway should automatically and seamlessly failover to a different provider that supports the requested model.

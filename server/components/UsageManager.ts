@@ -1,6 +1,8 @@
 import { RateLimiterMemory, IRateLimiterOptions } from "rate-limiter-flexible";
 import { ConfigManager } from "./ConfigManager.js";
 import { Provider } from "../../schemas/provider.schema.js";
+import { Model } from "../../schemas/model.schema.js";
+import { AppConfig } from "../../schemas/appConfig.schema.js";
 import { logger } from "./Logger.js";
 import { Limits } from "../../schemas/limits.schema.js";
 import { getErrorMessage, formatDuration } from "./Utils.js";
@@ -44,7 +46,7 @@ export class UsageManager {
   private limiters = new Map<string, RateLimiterMemory>();
 
   // Private constructor to enforce singleton pattern. Does not initialize.
-  private constructor() {}
+  private constructor() { }
 
   /**
    * Initializes the singleton UsageManager by creating and configuring rate limiters.
@@ -56,7 +58,13 @@ export class UsageManager {
       return;
     }
     UsageManager.instance = new UsageManager();
-    UsageManager.instance.initializeLimiters();
+    UsageManager.instance.updateLimiters(); // Initial setup
+
+    // Listen for config changes to dynamically update limiters
+    ConfigManager.events.on('configUpdated', (newConfig: AppConfig) => {
+      logger.info("Configuration has been updated. Checking for rate limiter changes...");
+      UsageManager.getInstance().updateLimiters(newConfig);
+    });
   }
 
   /**
@@ -73,62 +81,118 @@ export class UsageManager {
   /**
    * Creates and configures rate limiters for each provider.
    */
-  private initializeLimiters(): void {
-    const providers = ConfigManager.getProviders();
-    logger.info("Initializing rate limiters for all providers...");
+  /**
+   * Updates rate limiters based on the provided configuration.
+   * This function intelligently adds, removes, and updates limiters
+   * without resetting the state of unchanged limiters.
+   */
+  public updateLimiters(config: AppConfig | null = null): void {
+    const newProviders = config ? config.providers : ConfigManager.getProviders();
+    const newProviderIds = new Set(newProviders.map(p => p.id));
 
-    for (const provider of providers) {
-      // Create limiters for all models in this provider
-      this.createLimitersForProvider(provider);
+    const currentProviderIds = new Set<string>();
+    for (const key of this.limiters.keys()) {
+      currentProviderIds.add(key.split('/')[0]);
     }
-    logger.info("Rate limiters initialized.");
+
+    // 1. Remove limiters for providers that are no longer in the config
+    for (const providerId of currentProviderIds) {
+      if (!newProviderIds.has(providerId)) {
+        this.removeLimitersForProvider(providerId);
+      }
+    }
+
+    // 2. Add or update limiters for current providers
+    for (const provider of newProviders) {
+      if (!currentProviderIds.has(provider.id)) {
+        // New provider: add all its limiters
+        logger.info(`Adding new provider '${provider.id}' to UsageManager.`);
+        this.createLimitersForProvider(provider);
+      } else {
+        // Existing provider: check for model changes
+        this.updateLimitersForExistingProvider(provider);
+      }
+    }
+    logger.info("Rate limiter update check complete.");
+  }
+
+  /**
+   * For an existing provider, adds limiters for new models and removes limiters for old ones.
+   */
+  private updateLimitersForExistingProvider(provider: Provider): void {
+    const existingModelKeys = Array.from(this.limiters.keys()).filter(k => k.startsWith(`${provider.id}/`));
+    const existingModelNames = new Set(existingModelKeys.map(k => k.split('/')[1]));
+    const newModelNames = new Set(provider.models.map(m => m.name));
+
+    // Add limiters for new models
+    for (const model of provider.models) {
+      if (!existingModelNames.has(model.name)) {
+        logger.info(`Adding new model '${model.name}' to provider '${provider.id}'.`);
+        this.createLimitersForModel(provider, model);
+      }
+    }
+
+    // Remove limiters for deleted models
+    for (const modelName of existingModelNames) {
+      if (!newModelNames.has(modelName)) {
+        logger.info(`Removing model '${modelName}' from provider '${provider.id}'.`);
+        this.removeLimitersForModel(provider.id, modelName);
+      }
+    }
   }
 
   /**
    * Creates individual rate limiters for all models in a provider.
    */
   private createLimitersForProvider(provider: Provider): void {
-    // Defines the types and durations of rate limits the UsageManager is designed to track.
-    // The actual limit values are read from each model's configuration.
+    for (const model of provider.models) {
+      this.createLimitersForModel(provider, model);
+    }
+  }
+
+  private createLimitersForModel(provider: Provider, model: Model): void {
     const limitConfigs: [LimitType, number, 'requests' | 'tokens' | 'cost'][] = [
       ["requestsPerMinute", 60, "requests"], ["requestsPerHour", 3600, "requests"], ["requestsPerDay", 86400, "requests"],
       ["tokensPerMinute", 60, "tokens"], ["tokensPerHour", 3600, "tokens"], ["tokensPerDay", 86400, "tokens"],
       ["costPerMinute", 60, "cost"], ["costPerHour", 3600, "cost"], ["costPerDay", 86400, "cost"],
     ];
-
-    // Maximum value for tracking without limits (2^31 - 1)
     const MAX_TRACKING_POINTS = 2147483647;
 
-    // Create limiters for ALL models to enable usage tracking
-    for (const model of provider.models) {
-      for (const [limitType, duration, type] of limitConfigs) {
-        let points: number;
+    for (const [limitType, duration, type] of limitConfigs) {
+      let points: number;
+      if (model.limits && model.limits[limitType] !== undefined && model.limits[limitType]! > 0) {
+        points = model.limits[limitType]!;
+        if (type === 'cost') points = Math.floor(points * COST_MULTIPLIER);
+      } else {
+        points = MAX_TRACKING_POINTS;
+      }
 
-        // Check if model has explicit limits configured
-        if (model.limits && model.limits[limitType] !== undefined && model.limits[limitType]! > 0) {
-          points = model.limits[limitType]!;
-          // Convert cost limits from dollars to integer points
-          if (type === 'cost') {
-            points = Math.floor(points * COST_MULTIPLIER);
-          }
-        } else {
-          // No explicit limit - use max value for tracking purposes
-          points = MAX_TRACKING_POINTS;
-        }
+      const key = `${provider.id}/${model.name}/${limitType}`;
+      const opts: IRateLimiterOptions = { points, duration };
+      this.limiters.set(key, new RateLimiterMemory(opts));
 
-        const key = `${provider.id}/${model.name}/${limitType}`;
-        const opts: IRateLimiterOptions = { points, duration };
-        this.limiters.set(key, new RateLimiterMemory(opts));
+      if (points === MAX_TRACKING_POINTS) {
+        logger.debug(`Limiter: '${key}': unlimited tracking for ${type}/${formatDuration(duration)} (${duration}s).`);
+      } else {
+        logger.debug(`Limiter: '${key}': ${points} ${type}/${formatDuration(duration)} (${duration}s).`);
+      }
+    }
+  }
 
-        if (points === MAX_TRACKING_POINTS) {
-          logger.debug(
-            `Limiter: '${key}': unlimited tracking for ${type}/${formatDuration(duration)} (${duration}s).`,
-          );
-        } else {
-          logger.debug(
-            `Limiter: '${key}': ${points} ${type}/${formatDuration(duration)} (${duration}s).`,
-          );
-        }
+  private removeLimitersForProvider(providerId: string): void {
+    logger.info(`Removing all limiters for provider '${providerId}'.`);
+    for (const key of this.limiters.keys()) {
+      if (key.startsWith(`${providerId}/`)) {
+        this.limiters.delete(key);
+      }
+    }
+  }
+
+  private removeLimitersForModel(providerId: string, modelName: string): void {
+    logger.warn(`Removing limiters for model '${modelName}' from provider '${providerId}'.`);
+    for (const key of this.limiters.keys()) {
+      if (key.startsWith(`${providerId}/${modelName}/`)) {
+        this.limiters.delete(key);
       }
     }
   }
@@ -175,7 +239,7 @@ export class UsageManager {
     costInUSD: number = 0,
   ): Promise<void> {
     logger.debug(`Consuming usage for provider '${providerId}':`, { model, usage, costInUSD });
-    
+
     try {
       const dbManager = UsageDatabaseManager.getInstance();
       await dbManager.recordUsage({

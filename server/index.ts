@@ -28,19 +28,19 @@ async function main() {
       default: "info",
     })
     .option("usage-db-path", {
-        type: "string",
-        description: "Path to the usage database file (e.g., usage.db.json). If not provided, usage tracking is disabled.",
-        
+      type: "string",
+      description: "Path to the usage database file (e.g., usage.db.json). If not provided, usage tracking is disabled.",
+
     })
     .option("prune-max-age", {
-        type: "number",
-        description: "Maximum age in hours for usage records. Older records will be pruned on startup.",
-        default: 720, // 30 days
+      type: "number",
+      description: "Maximum age in hours for usage records. Older records will be pruned on startup.",
+      default: 720, // 30 days
     })
     .option("disable-pruning", {
-        type: "boolean",
-        description: "Disables automatic pruning of old usage records on startup.",
-        default: false,
+      type: "boolean",
+      description: "Disables automatic pruning of old usage records on startup.",
+      default: false,
     })
     .parse();
 
@@ -63,7 +63,7 @@ async function main() {
       }
     }
   }
-  
+
   // --- 3. Get Instances ---
   const router = Router.getInstance();
   const usageManager = UsageManager.getInstance();
@@ -104,7 +104,7 @@ async function main() {
 
       for (const provider of providers) {
         for (const model of provider.models) {
-          allModels.add(model.name);
+          allModels.add(model.mappedName ?? model.name);
         }
       }
 

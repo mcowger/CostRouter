@@ -19,6 +19,7 @@ This document outlines the key technologies, libraries, and tools used in the LL
 *   **Zod**: A TypeScript-first schema declaration and validation library. It is used to validate the structure and types of the main `config.jsonc` file.
 *   **Pino**: A high-performance, low-overhead logger used for all application logging, configured with `pino-pretty` for development.
 *   **lowdb**: A lightweight JSON database used for persisting historical usage data.
+*   **yargs**: A library for building interactive command-line tools, used here to parse command-line arguments.
 
 ## Frontend (Vue.js)
 
@@ -26,18 +27,17 @@ This document outlines the key technologies, libraries, and tools used in the LL
 *   **Vite**: A modern frontend build tool that provides a faster and leaner development experience for modern web projects.
 *   **Pinia**: The official state management library for Vue.js.
 *   **Vue Router**: The official router for Vue.js.
+*   **Axios**: A promise-based HTTP client for the browser and Node.js, used for making API requests from the UI.
+*   **date-fns**: A modern JavaScript date utility library.
 *   **vue-sparklines**: A component for generating simple, lightweight sparkline charts.
 
 ## Development & Build Tools
 
-*   **pnpm**: The primary package manager for the project.
+*   **pnpm**: The primary package manager for the project, used with workspaces.
 *   **tsx**: A tool for executing TypeScript files directly, used for hot-reloading the development server.
+*   **Nodemon**: Monitors for any changes in your source and automatically restarts your server.
+*   **Concurrently**: A tool to run multiple commands concurrently.
 *   **TypeScript Compiler (`tsc`)**: Used to compile the TypeScript source code into JavaScript for production builds.
-*   **Prettier**: Used for automated code formatting to maintain a consistent style.
 *   **Jest**: A JavaScript testing framework used for unit and integration tests.
 *   **Supertest**: A library for testing Node.js HTTP servers.
-
-## Configuration
-
-*   **JSONC**: The configuration file format is JSON with Comments (`.jsonc`), allowing for better documentation within the config file.
-*   **yargs**: A library for building interactive command-line tools, used here to parse command-line arguments.
+*   **Prettier**: Used for automated code formatting to maintain a consistent style.
