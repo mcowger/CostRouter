@@ -1,53 +1,38 @@
-import * as fs from 'fs';
-import * as path from 'path';
 import { logger } from "./Logger.js";
+import { Provider } from "../../schemas/provider.schema.js";
 
 const COPILOT_TOKEN_API_URL = "https://api.github.com/copilot_internal/v2/token";
-const TOKEN_FILE = 'copilot.data';
 
 interface CopilotMeta {
   token: string;
   expiresAt: number;
 }
 
-// Token cache storing {token, expiresAt} keyed by oauthToken
-const cacheMap = new Map<string, CopilotMeta>();
+// Token cache storing {token, expiresAt} keyed by the provider's OAuth token
+const tokenCache = new Map<string, CopilotMeta>();
 
+/**
+ * Manages GitHub Copilot bearer tokens on a per-provider basis.
+ * This is a stateless utility class; no instance is required.
+ */
 export class CopilotTokenManager {
-  private static instance: CopilotTokenManager;
-  private oauthToken: string | null = null;
-
-  private constructor() {
-    this.loadTokenFromFile();
-  }
-
-  public static getInstance(): CopilotTokenManager {
-    if (!CopilotTokenManager.instance) {
-      CopilotTokenManager.instance = new CopilotTokenManager();
-    }
-    return CopilotTokenManager.instance;
-  }
-
-  private loadTokenFromFile(): void {
-    try {
-      const tokenPath = path.resolve(process.cwd(), TOKEN_FILE);
-      if (fs.existsSync(tokenPath)) {
-        this.oauthToken = fs.readFileSync(tokenPath, 'utf-8').trim();
-        logger.info('Successfully loaded Copilot OAuth token from file.');
-        logger.debug({ oauthToken: this.oauthToken.slice(0, 10) }, "Copilot OAuth token");
-      }
-    } catch (error: any) {
-      logger.error(`Failed to load Copilot OAuth token: ${error.message}`);
-    }
-  }
-
-  private isTokenValid(meta?: CopilotMeta): boolean {
+  /**
+   * Checks if a cached token is still valid, allowing for a 5-minute buffer.
+   * @param meta The token metadata from the cache.
+   * @returns True if the token is valid, otherwise false.
+   */
+  private static isTokenValid(meta?: CopilotMeta): boolean {
     if (!meta) return false;
-    const bufferDuration = 5 * 60 * 1000;
+    const bufferDuration = 5 * 60 * 1000; // 5 minutes
     return Date.now() < meta.expiresAt - bufferDuration;
   }
 
-  private async fetchMeta(oauthToken: string): Promise<CopilotMeta> {
+  /**
+   * Fetches a new bearer token from the GitHub Copilot API.
+   * @param oauthToken The GitHub OAuth token for the provider.
+   * @returns The token metadata.
+   */
+  private static async fetchMeta(oauthToken: string): Promise<CopilotMeta> {
     const res = await fetch(COPILOT_TOKEN_API_URL, {
       method: "GET",
       headers: {
@@ -57,7 +42,7 @@ export class CopilotTokenManager {
     });
 
     if (!res.ok) {
-      throw new Error(`Failed to fetch token: ${res.status} ${res.statusText}`);
+      throw new Error(`Failed to fetch bearer token: ${res.status} ${res.statusText}`);
     }
 
     const { token, expires_at } = await res.json();
@@ -66,21 +51,35 @@ export class CopilotTokenManager {
     return { token, expiresAt };
   }
 
-  private async refreshMeta(oauthToken: string): Promise<CopilotMeta> {
-    logger.debug({ oauthToken: oauthToken.slice(0, 10) }, "Refreshing Copilot token");
+  /**
+   * Refreshes the bearer token and updates the cache.
+   * @param oauthToken The GitHub OAuth token for the provider.
+   * @returns The newly fetched token metadata.
+   */
+  private static async refreshMeta(oauthToken: string): Promise<CopilotMeta> {
+    logger.debug({ oauthToken: oauthToken.slice(0, 10) }, "Refreshing Copilot bearer token");
     const meta = await this.fetchMeta(oauthToken);
-    cacheMap.set(oauthToken, meta);
+    tokenCache.set(oauthToken, meta);
     return meta;
   }
 
-  public async getBearerToken(): Promise<string> {
-    if (!this.oauthToken) {
-      throw new Error("Copilot OAuth token not found. Please run the getCopilotToken.ts script.");
+  /**
+   * Gets a valid bearer token for a specific Copilot provider.
+   * It uses a cache to avoid unnecessary requests.
+   * @param provider The Copilot provider configuration.
+   * @returns A valid bearer token.
+   */
+  public static async getBearerToken(provider: Provider): Promise<string> {
+    if (provider.type !== 'copilot' || !provider.oauthToken) {
+      throw new Error("Invalid provider or missing OAuth token for Copilot.");
     }
-    let meta = cacheMap.get(this.oauthToken);
+
+    let meta = tokenCache.get(provider.oauthToken);
+
     if (!this.isTokenValid(meta)) {
-      meta = await this.refreshMeta(this.oauthToken);
+      meta = await this.refreshMeta(provider.oauthToken);
     }
+
     return meta?.token || "";
   }
 }

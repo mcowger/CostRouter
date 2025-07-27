@@ -28,6 +28,7 @@ export const ProviderTypeSchema = z.enum([
   "openai-compatible",
   "claude-code",
   "gemini-cli",
+  "copilot",
 
   // Legacy types (for backward compatibility)
   "custom", // maps to openai-compatible
@@ -48,6 +49,9 @@ export const ProviderSchema = z
     // Common authentication fields
     /** API key (required for most providers) */
     apiKey: z.string().optional(),
+
+    /** GitHub OAuth token for Copilot */
+    oauthToken: z.string().optional(),
 
     // OpenAI-compatible specific fields
     /** Base URL (required for openai-compatible, custom, and legacy openai types) */
@@ -104,7 +108,7 @@ export const ProviderSchema = z
     message: "accessKeyId, secretAccessKey, and region are required for Bedrock providers",
     path: ["accessKeyId", "secretAccessKey", "region"],
   })
-;
+  ;
 
 /**
  * TypeScript type representing a single LLM provider's configuration.

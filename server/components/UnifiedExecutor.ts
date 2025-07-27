@@ -27,8 +27,9 @@ import { createXai, XaiProviderSettings } from "@ai-sdk/xai";
 import { createPerplexity, PerplexityProviderSettings } from "@ai-sdk/perplexity";
 import { createTogetherAI, TogetherAIProviderSettings } from "@ai-sdk/togetherai";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
+import { CopilotTokenManager } from "./CopilotTokenManager.js";
 
-// import { createOpenRouter } from '@openrouter/ai-sdk-provider'; Only supports v5, 
+// import { createOpenRouter } from '@openrouter/ai-sdk-provider'; Only supports v5,
 // which nothing else does.  For now, treat it as openai-compatible
 import { createOllama, OllamaProviderSettings } from "ollama-ai-provider";
 import { createQwen, QwenProviderSettings } from "qwen-ai-provider";
@@ -122,6 +123,19 @@ export class UnifiedExecutor {
       baseURL: config.baseURL!,
       apiKey: config.apiKey!,
     })],
+    ["copilot", async (config) => createOpenAICompatible({
+      name: config.id,
+      apiKey: await CopilotTokenManager.getBearerToken(config),
+      baseURL: config.baseURL || "https://api.githubcopilot.com/",
+      headers: {
+        accept: "application/json",
+        "editor-version": "vscode/1.85.1",
+        "Copilot-Integration-Id": "vscode-chat",
+        "content-type": "application/json",
+        "user-agent": "GithubCopilot/1.155.0",
+        "accept-encoding": "gzip,deflate,br",
+      },
+    })],
   ]);
 
   private constructor(usageManager: UsageManager) {
@@ -159,7 +173,7 @@ export class UnifiedExecutor {
   /**
    * Creates an AI SDK provider instance based on the provider configuration.
    */
-  private createProviderInstance(config: Provider): any {
+  private async createProviderInstance(config: Provider): Promise<any> {
     const factory = UnifiedExecutor.PROVIDER_FACTORIES.get(config.type);
 
     if (!factory) {
@@ -169,18 +183,19 @@ export class UnifiedExecutor {
       );
     }
 
-    return factory(config);
+    // The factory can be async now (e.g., for Copilot)
+    return await factory(config);
   }
 
   /**
    * Gets or creates a provider instance, with caching.
    */
-  private getOrCreateProvider(config: Provider): any {
+  private async getOrCreateProvider(config: Provider): Promise<any> {
     const cacheKey = `${config.type}-${config.id}`;
 
     if (!this.providerInstances.has(cacheKey)) {
       logger.debug(`Creating new provider instance for ${config.type}:${config.id}`);
-      const instance = this.createProviderInstance(config);
+      const instance = await this.createProviderInstance(config);
       this.providerInstances.set(cacheKey, instance);
     }
 
@@ -201,7 +216,7 @@ export class UnifiedExecutor {
 
     try {
       // Get or create the AI SDK provider instance
-      const providerInstance = this.getOrCreateProvider(chosenProvider);
+      const providerInstance = await this.getOrCreateProvider(chosenProvider);
 
       // Create the model using the provider
       const model = providerInstance(chosenModel.name);

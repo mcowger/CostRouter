@@ -12,6 +12,10 @@ import { logger, responseBodyLogger, requestResponseLogger } from "./components/
 import { UnifiedExecutor } from "./components/UnifiedExecutor.js";
 import { getErrorMessage } from "./components/Utils.js";
 
+const COPILOT_CLIENT_ID = 'Iv1.b507a08c87ecfe98';
+const COPILOT_DEVICE_CODE_URL = 'https://github.com/login/device/code';
+const COPILOT_OAUTH_TOKEN_URL = 'https://github.com/login/oauth/access_token';
+
 async function main() {
   // --- 1. Argument Parsing ---
   const argv = await yargs(hideBin(process.argv))
@@ -151,7 +155,80 @@ async function main() {
     }
   });
 
-  // --- 7. Usage API Routes ---
+  // --- 7. Copilot Auth API Routes ---
+  app.post("/api/copilot/auth/start", async (_req, res) => {
+    try {
+      const response = await fetch(COPILOT_DEVICE_CODE_URL, {
+        method: 'POST',
+        headers: {
+          'accept': 'application/json',
+          'content-type': 'application/json',
+          'User-Agent': 'CostRouter-Token-Generator/1.0',
+        },
+        body: JSON.stringify({ client_id: COPILOT_CLIENT_ID, scope: 'read:user' }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        return res.status(response.status).json(data);
+      }
+      res.json(data);
+    } catch (error) {
+      const message = getErrorMessage(error);
+      logger.error(`Failed to start Copilot auth: ${message}`);
+      res.status(500).json({ error: "Failed to start Copilot device authorization." });
+    }
+  });
+
+  app.post("/api/copilot/auth/poll", async (req, res) => {
+    try {
+      const { device_code, providerId } = req.body;
+      if (!device_code || !providerId) {
+        return res.status(400).json({ error: "Device code and provider ID are required." });
+      }
+
+      const response = await fetch(COPILOT_OAUTH_TOKEN_URL, {
+        method: 'POST',
+        headers: {
+          'accept': 'application/json',
+          'content-type': 'application/json',
+          'User-Agent': 'CostRouter-Token-Generator/1.0',
+        },
+        body: JSON.stringify({
+          client_id: COPILOT_CLIENT_ID,
+          device_code: device_code,
+          grant_type: 'urn:ietf:params:oauth:grant-type:device_code',
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.error) {
+        return res.json(data);
+      }
+
+      if (data.access_token) {
+        const configManager = ConfigManager.getInstance();
+        const currentConfig = configManager.getConfig();
+        const provider = currentConfig.providers.find(p => p.id === providerId);
+
+        if (provider) {
+          provider.oauthToken = data.access_token;
+          await configManager.updateConfig(currentConfig);
+          logger.info(`Successfully authorized and saved Copilot token for provider: ${providerId}`);
+        } else {
+          logger.warn(`Provider with ID ${providerId} not found during Copilot auth poll.`);
+        }
+      }
+      res.json(data);
+    } catch (error) {
+      const message = getErrorMessage(error);
+      logger.error(`Failed to poll for Copilot token: ${message}`);
+      res.status(500).json({ error: "Failed to poll for Copilot token." });
+    }
+  });
+
+
+  // --- 8. Usage API Routes ---
   app.get("/usage/get", async (req, res) => {
     try {
       const { hours = '24', model, providerId } = req.query;

@@ -17,8 +17,8 @@ export class DatabaseConfigManager implements IConfigManager {
   private constructor(dbPath: string) {
     const adapter = new JSONFile<AppConfig>(dbPath);
     // Set default data if the file doesn't exist or is empty
-    this.db = new Low(adapter, { providers: [] });
-    this.config = { providers: [] };
+    this.db = new Low(adapter, { providers: [], limiterState: {} });
+    this.config = { providers: [], limiterState: {} };
   }
 
   public static async initialize(databasePath: string): Promise<DatabaseConfigManager> {
@@ -27,11 +27,30 @@ export class DatabaseConfigManager implements IConfigManager {
 
     await instance.db.read();
 
-    // If the database file is new/empty, db.data will be the default.
-    // It's good practice to write it back to ensure the file is created.
-    if (!instance.db.data || instance.db.data.providers.length === 0) {
-      instance.db.data = { providers: [] };
+    // If the database file is new, it will be null, so we should write the default.
+    if (instance.db.data === null) {
+      instance.db.data = { providers: [], limiterState: {} };
       await instance.db.write();
+    }
+
+    // Sanitize limiterState to remove invalid entries left by rate-limiter-flexible
+    if (instance.db.data.limiterState) {
+      for (const key in instance.db.data.limiterState) {
+        const entry = instance.db.data.limiterState[key];
+        // The rate-limiter-flexible library can leave empty objects {} in the store.
+        // We need to clean these up before parsing with Zod.
+        if (
+          !entry ||
+          typeof entry.points !== 'number' ||
+          typeof entry.ms !== 'number'
+        ) {
+          logger.warn(`Removing invalid limiter state entry for key: ${key}`);
+          delete instance.db.data.limiterState[key];
+        }
+      }
+    } else {
+      // If limiterState is missing, initialize it to prevent data loss on write.
+      instance.db.data.limiterState = {};
     }
 
     // Validate the loaded configuration
@@ -54,7 +73,7 @@ export class DatabaseConfigManager implements IConfigManager {
     const validatedConfig = AppConfigSchema.parse(newConfig);
 
     this.config = validatedConfig;
-    this.db.data = validatedConfig;
+    Object.assign(this.db.data, validatedConfig);
     await this.db.write();
 
     this.events.emit('config-updated', this.config);

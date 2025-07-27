@@ -48,6 +48,12 @@
         @update="updateProvider"
       />
 
+      <!-- Copilot-specific settings -->
+      <CopilotSettings
+        v-if="provider.type === 'copilot'"
+        :provider-id="provider.id"
+      />
+
       <!-- Models Section Accordion -->
       <details class="accordion">
         <summary class="accordion-header">
@@ -91,6 +97,7 @@ import type { Model } from '../../../schemas/model.schema';
 import { ProviderTypeSchema } from '../../../schemas/provider.schema';
 import ProviderFields from './ProviderFields.vue';
 import ModelCard from './ModelCard.vue';
+import CopilotSettings from './CopilotSettings.vue';
 
 interface Props {
   provider: Provider;
@@ -133,7 +140,8 @@ const getProviderDisplayName = (type: ProviderType): string => {
     'openai-compatible': 'OpenAI Compatible',
     'claude-code': 'Claude Code (VS Code)',
     'gemini-cli': 'Gemini CLI',
-    'custom': 'Custom (Legacy)'
+    'custom': 'Custom (Legacy)',
+    'copilot': 'GitHub Copilot'
   };
   return displayNames[type] || type;
 };
