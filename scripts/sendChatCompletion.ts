@@ -11,7 +11,8 @@ async function generateTextExample() {
     console.log('Sending chat completion request...');
 
     const completion = await client.chat.completions.create({
-      model: "gpt-4.1",
+      model: "sonnet",
+      //model: "gpt-4.1",
       //model: "gemini-2.5-flash",
       // model: "nonexistent-model",
       messages: [{ role: "user", content: "are you gpt-4o or gpt-4.1?" }],

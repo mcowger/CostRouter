@@ -8,7 +8,7 @@ Successfully implemented a comprehensive unit testing suite for the LLM Gateway 
 
 ### ✅ Testing Framework Setup
 - **Jest Configuration**: Configured Jest for TypeScript and ES modules support
-- **Package Management**: Used pnpm to install testing dependencies
+- **Package Management**: Use npm to install testing dependencies
 - **Test Scripts**: Added comprehensive test scripts to package.json
 - **Coverage Reporting**: Configured coverage collection and reporting
 

@@ -11,7 +11,7 @@
       "cwd": "${workspaceFolder}",
       "console": "integratedTerminal",
       "outputCapture": "std",
-      "runtimeExecutable": "pnpm",
+      "runtimeExecutable": "npm",
       "runtimeArgs": [
         "run",
         "dev:server",
@@ -28,7 +28,7 @@
       "console": "integratedTerminal",
       "outputCapture": "std",
       "showAsyncStacks": true,
-      "runtimeExecutable": "pnpm",
+      "runtimeExecutable": "npm",
       "runtimeArgs": [
         "run",
         "dev:ui"

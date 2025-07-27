@@ -24,7 +24,7 @@ class E2ETestRunner {
     } catch (error) {
       console.error('\n❌ E2E tests failed:', error);
       console.error('\n💡 Make sure to start the test environment first:');
-      console.error('   pnpm test:e2e:env');
+      console.error('   npm test:e2e:env');
       process.exit(1);
     }
   }

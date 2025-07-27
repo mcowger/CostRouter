@@ -34,7 +34,7 @@ import { CopilotTokenManager } from "./config/CopilotTokenManager.js";
 import { createOllama, OllamaProviderSettings } from "ollama-ai-provider";
 import { createQwen, QwenProviderSettings } from "qwen-ai-provider";
 import { createGeminiProvider } from "ai-sdk-provider-gemini-cli"
-//import {  ClaudeCodeProviderSettings, createClaudeCode } from "ai-sdk-provider-claude-code"
+import { createClaudeCode } from "ai-sdk-provider-claude-code"
 
 /**
  * Unified executor that handles all AI SDK v5 providers.
@@ -63,13 +63,6 @@ export class UnifiedExecutor {
     ["google-vertex", (config: GoogleVertexProviderSettings) => createVertex({
       googleAuthOptions: config.googleAuthOptions
     })],
-
-    // Commented out until I can add this to the provider schema.
-    // ["bedrock", (config) => createAmazonBedrock({
-    //   accessKeyId: config.accessKeyId,
-    //   secretAccessKey: config.secretAccessKey,
-    //   region: config.region
-    // })],
     ["groq", (config: GroqProviderSettings) => createGroq({
       apiKey: config.apiKey
     })],
@@ -89,22 +82,17 @@ export class UnifiedExecutor {
       apiKey: config.apiKey
     })],
 
-
-    // OpenAI-compatible providers
     ["qwen", (config: QwenProviderSettings) => createQwen({
       apiKey: config.apiKey!,
     })],
-
-    // OpenAI-compatible providers
     ["ollama", (config: OllamaProviderSettings) => createOllama({
       baseURL: config.baseURL || "http://localhost:11434",
     })],
     ["gemini-cli", (_config: any) => createGeminiProvider({
       authType: "oauth-personal"
     })],
-    // ["claude-code", (_config: ClaudeCodeProviderSettings) => createClaudeCode({
-
-    // })],
+    ["claude-code", (_config: any) => createClaudeCode({
+    })],
     // OpenRouter - use compatible for now because their provider only supports v5.
     ["openrouter", (config) => createOpenAICompatible({
       name: config.id,

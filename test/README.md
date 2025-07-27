@@ -31,21 +31,21 @@ The E2E testing system includes:
 
 ### Run Complete E2E Test Suite
 ```bash
-pnpm test:e2e
+npm test:e2e
 ```
 
 ### Start Test Environment for Manual Testing
 ```bash
-pnpm test:e2e:env
+ppm test:e2e:env
 ```
 
 ### Run Individual Components
 ```bash
 # Start mock servers only
-pnpm test:mock-server
+npm test:mock-server
 
 # Run unit tests + E2E tests
-pnpm test:all
+npm test:all
 ```
 
 ## Test Structure
@@ -175,23 +175,23 @@ const isValid = helpers.validateChatCompletionResponse(response.body);
 ## Running Tests
 
 ### Prerequisites
-1. Node.js and pnpm installed
-2. All dependencies installed (`pnpm install`)
+1. Node.js and npm installed
+2. All dependencies installed (`npm install`)
 3. No services running on ports 3000-3003
 
 ### Automated Test Execution
 ```bash
 # Complete E2E test suite with automatic setup/teardown
-pnpm test:e2e
+npm test:e2e
 
 # Run with verbose output
-pnpm test:e2e -- --verbose
+npm test:e2e -- --verbose
 ```
 
 ### Manual Test Environment
 ```bash
 # Start test environment (keeps running)
-pnpm test:e2e:env
+npm test:e2e:env
 
 # In another terminal, run individual tests
 jest test/e2e/e2e.test.ts --config jest.e2e.config.js
@@ -235,14 +235,14 @@ jest test/e2e/performance.test.ts --config jest.e2e.config.js --verbose
 2. **Service Startup Timeout**
    ```bash
    # Check service logs
-   pnpm test:e2e:env
+   npm test:e2e:env
    # Look for startup errors in output
    ```
 
 3. **Test Failures**
    ```bash
    # Run with debug output
-   DEBUG=* pnpm test:e2e
+   DEBUG=* npm test:e2e
    
    # Run individual test file
    jest test/e2e/e2e.test.ts --config jest.e2e.config.js --verbose
