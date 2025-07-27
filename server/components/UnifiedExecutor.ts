@@ -27,7 +27,7 @@ import { createXai, XaiProviderSettings } from "@ai-sdk/xai";
 import { createPerplexity, PerplexityProviderSettings } from "@ai-sdk/perplexity";
 import { createTogetherAI, TogetherAIProviderSettings } from "@ai-sdk/togetherai";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
-import { CopilotTokenManager } from "./CopilotTokenManager.js";
+import { CopilotTokenManager } from "./config/CopilotTokenManager.js";
 
 // import { createOpenRouter } from '@openrouter/ai-sdk-provider'; Only supports v5,
 // which nothing else does.  For now, treat it as openai-compatible
