@@ -18,7 +18,7 @@ The gateway is paired with a comprehensive **web interface** for real-time monit
 
 *   **Dynamic Configuration**: Provider settings, models, and limits can be updated live from the UI without restarting the server. The backend handles atomic updates to the configuration file.
 
-*   **Extensive Provider Support**: Natively supports a wide range of LLM providers through the Vercel AI SDK, including OpenAI, Anthropic, Google, Groq, Mistral, and any OpenAI-compatible API. The architecture is designed for easy extension.
+*   **Extensive Provider Support**: Natively supports a wide range of LLM providers through the Vercel AI SDK, including OpenAI, Anthropic, Google, Groq, Mistral, `claude-code`, `gemini-cli`, and any OpenAI-compatible API. The architecture is designed for easy extension.
 
 *   **Usage Persistence & Analytics**: Persists historical usage data to a local JSON database (`lowdb`), enabling analytics and long-term tracking. The UI includes sparkline charts to visualize historical trends.
 

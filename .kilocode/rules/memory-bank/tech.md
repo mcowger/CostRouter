@@ -14,6 +14,8 @@ This document outlines the key technologies, libraries, and tools used in the LL
     *   `@ai-sdk/google` and `@ai-sdk/google-vertex`
     *   `@ai-sdk/groq`
     *   `@ai-sdk/mistral`
+    *   `ai-sdk-provider-claude-code`
+    *   `ai-sdk-provider-gemini-cli`
     *   And many others (DeepSeek, X-AI, Perplexity, etc.)
 *   **Rate-Limiter-Flexible**: A library to manage and enforce rate limits for each provider based on requests and token counts.
 *   **Zod**: A TypeScript-first schema declaration and validation library. It is used to validate the structure and types of the main `config.jsonc` file.
@@ -33,11 +35,12 @@ This document outlines the key technologies, libraries, and tools used in the LL
 
 ## Development & Build Tools
 
-*   **npm**: The primary package manager for the project, with a dedicated workspace for ui.
-*   **tsx**: A tool for executing TypeScript files directly, used for hot-reloading the development server.
+*   **npm**: The primary package manager for the project. `pnpm` should not be used.
+*   **npx**: The standard way to execute locally installed npm package binaries. Tools like `prettier`, `tsc`, `tsx`, and `vue-tsc` should be invoked with `npx` (e.g., `npx prettier --write .`).
+*   **tsx**: A tool for executing TypeScript files directly (`npx tsx`), used for hot-reloading the development server via `nodemon`.
 *   **Nodemon**: Monitors for any changes in your source and automatically restarts your server.
-*   **Concurrently**: A tool to run multiple commands concurrently.
-*   **TypeScript Compiler (`tsc`)**: Used to compile the TypeScript source code into JavaScript for production builds.
-*   **Jest**: A JavaScript testing framework used for unit and integration tests.
+*   **Concurrently**: A tool to run multiple commands concurrently (`npx concurrently ...`).
+*   **TypeScript Compiler (`tsc`)**: Used to compile the TypeScript source code into JavaScript for production builds (`npx tsc`).
+*   **Jest**: A JavaScript testing framework for unit and integration tests.
 *   **Supertest**: A library for testing Node.js HTTP servers.
-*   **Prettier**: Used for automated code formatting to maintain a consistent style.
+*   **Prettier**: Used for automated code formatting to maintain a consistent style (`npx prettier --write .`).

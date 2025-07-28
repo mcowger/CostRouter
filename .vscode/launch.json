@@ -11,10 +11,11 @@
       "cwd": "${workspaceFolder}",
       "console": "integratedTerminal",
       "outputCapture": "std",
-      "runtimeExecutable": "npm",
+      "runtimeExecutable": "npx",
       "runtimeArgs": [
+        "npm",
         "run",
-        "dev:server",
+        "dev:server"
       ]
     },
     {
@@ -28,8 +29,9 @@
       "console": "integratedTerminal",
       "outputCapture": "std",
       "showAsyncStacks": true,
-      "runtimeExecutable": "npm",
+      "runtimeExecutable": "npx",
       "runtimeArgs": [
+        "npm",
         "run",
         "dev:ui"
       ]

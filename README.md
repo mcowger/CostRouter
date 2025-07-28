@@ -7,7 +7,7 @@ An intelligent reverse proxy for routing requests to multiple Large Language Mod
 *   **Intelligent Routing**: Automatically selects providers based on model availability and rate-limit tracking.
 *   **Real-time Monitoring**: A Vue.js dashboard provides a live view of usage statistics, including requests, tokens, and cost per provider.
 *   **Dynamic Configuration**: Update provider settings, models, and limits from the UI without restarting the server.
-*   **Extensive Provider Support**: Natively supports a wide range of LLM providers through the Vercel AI SDK.
+*   **Extensive Provider Support**: Natively supports a wide range of LLM providers through the Vercel AI SDK, including OpenAI, Anthropic, Google, Groq, Mistral, claude-code, gemini-cli, and any OpenAI-compatible API.
 *   **Unified API**: A single, consistent OpenAI-compatible endpoint for all backend providers.
 
 ## Getting Started (Development)
@@ -48,14 +48,18 @@ An intelligent reverse proxy for routing requests to multiple Large Language Mod
 
 1.  **Build the Docker image:**
     ```bash
-    docker build -t llm-gateway .
+    npm run docker-build
     ```
 
-
+2.  **Create a config directory (optional):**
+    ```bash
+    mkdir -p ./config
+    cp config.test.jsonc ./config/config.jsonc  # Optional: copy example config
+    ```
 
 3.  **Run the Docker container:**
     ```bash
-    docker run --rm -p 3000:3000 -v $(pwd)/my-config:/config --name llm-gateway-container llm-gateway
+    docker run --rm -p 3000:3000 -v $(pwd)/config:/config --name llm-gateway-container llm-gateway
     ```
     *   The gateway will be accessible on `http://localhost:3000`.
     *   The UI is served from the same port at the `/` route.
@@ -88,4 +92,4 @@ The gateway uses a pipeline pattern with singleton managers for core services:
 
 *   **Backend**: Node.js, Express, TypeScript, Vercel AI SDK, Zod, Pino, rate-limiter-flexible
 *   **Frontend**: Vue 3, Vite, Pinia, Vue Router
-*   **Build Tools**: npm, tsx, Docker
+*   **Build Tools**: npm (use `npx` for binaries like `tsc`, `tsx`, `vue-tsc`, `prettier`), Docker, and the new `docker-build` npm script.

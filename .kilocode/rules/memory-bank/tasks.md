@@ -42,6 +42,8 @@ export const ProviderTypeSchema = z.enum([
     "anthropic",
     "google",
     "google-vertex",
+    "claude-code",
+    "gemini-cli",
     // ... other providers
     "nexusai", // Add the new provider type here
 ]);
@@ -72,6 +74,6 @@ export class UnifiedExecutor {
 
 ### Important Notes
 
-*   Ensure the AI SDK you are adding is already listed as a dependency in `package.json`. If not, add it using `npm add @ai-sdk/new-provider-name`.
+*   Ensure the AI SDK you are adding is already listed as a dependency in `package.json`. If not, add it using `npx npm add @ai-sdk/new-provider-name`.
 *   Verify if the new provider requires any unique configuration properties (like `resourceName` for Google Vertex) and update the `ProviderSchema` accordingly if necessary.
 *   After adding the provider, update the `config.jsonc` file with a new provider entry to test the integration.

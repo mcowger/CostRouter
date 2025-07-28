@@ -32,8 +32,7 @@
       ]
     },
     "types": [
-      "node",
-      "jest"
+      "node"
     ],
     "lib": [
       "ES2022",
@@ -49,6 +48,7 @@
     "dist",
     "ui/dist",
     "**/*.test.ts",
+    "**/__tests__",
     "**/__mocks__"
   ]
 }

@@ -25,7 +25,7 @@ graph TD
     
     subgraph Unified AI SDK Executor
       C -- "Delegates to..." --> I{ai-sdk Instances};
-      I -- "Handles all providers" --> J[OpenAI, Anthropic, Google, etc.];
+      I -- "Handles all providers" --> J[OpenAI, Anthropic, Google, claude-code, gemini-cli, etc.];
     end
 
     A -- "req.body.model" --> B;

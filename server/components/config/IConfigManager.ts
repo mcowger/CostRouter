@@ -1,6 +1,6 @@
 import EventEmitter from 'events';
-import { AppConfig } from '../../schemas/appConfig.schema.js';
-import { Provider } from '../../schemas/provider.schema.js';
+import { AppConfig } from '#schemas/appConfig.schema';
+import { Provider } from '#schemas/provider.schema';
 
 export type LimiterState = Record<string, { points: number; ms: number }>;
 
