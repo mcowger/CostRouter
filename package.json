@@ -24,8 +24,8 @@
     "dev:server": "nodemon",
     "build": "npx vue-tsc --build && npx vite --emptyOutDir build ui ",
     "type-check": "npx vue-tsc --build --noEmit",
-    "docker:build": "npm run build && docker build -t costrouter .",
-    "docker:run": "docker run -p 3000:3000 -v $(pwd)/config:/config costrouter",
+    "docker:build": "npm run build && docker build -t ghcr.io/mcowger/costrouter:latest .",
+    "docker:run": "docker run -p 3000:3000 -v $(pwd)/config:/config ghcr.io/mcowger/costrouter:latest",
     "docker:build-and-run": "npm run docker:build && npm run docker:run",
     "start:prod": "npm run build && npm start"
   },
