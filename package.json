@@ -24,7 +24,10 @@
     "dev:server": "nodemon",
     "build": "npx vue-tsc --build && npx vite --emptyOutDir build ui ",
     "type-check": "npx vue-tsc --build --noEmit",
-    "docker-build": "npm run build && docker build -t llm-gateway ."
+    "docker:build": "npm run build && docker build -t costrouter .",
+    "docker:run": "docker run -p 3000:3000 -v $(pwd)/config:/config costrouter",
+    "docker:build-and-run": "npm run docker:build && npm run docker:run",
+    "start:prod": "npm run build && npm start"
   },
   "dependencies": {
     "@ai-sdk/amazon-bedrock": "^2.2.12",
