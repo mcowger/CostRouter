@@ -36,7 +36,7 @@ export class CopilotTokenManager {
     const res = await fetch(COPILOT_TOKEN_API_URL, {
       method: "GET",
       headers: {
-        "User-Agent": "CostRouter",
+        "User-Agent": "costrouter",
         Authorization: `token ${oauthToken}`,
       },
     });

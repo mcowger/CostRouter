@@ -9,7 +9,7 @@ const OUTPUT_FILE = 'copilot.data';
 const MANDATORY_HEADERS = {
   'accept': 'application/json',
   'content-type': 'application/json',
-  'User-Agent': 'CostRouter-Token-Generator/1.0',
+  'User-Agent': 'costrouter-Token-Generator/1.0',
 };
 
 async function startDeviceLogin() {

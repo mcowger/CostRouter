@@ -163,7 +163,7 @@ async function main() {
         headers: {
           'accept': 'application/json',
           'content-type': 'application/json',
-          'User-Agent': 'CostRouter-Token-Generator/1.0',
+          'User-Agent': 'costrouter-Token-Generator/1.0',
         },
         body: JSON.stringify({ client_id: COPILOT_CLIENT_ID, scope: 'read:user' }),
       });
@@ -191,7 +191,7 @@ async function main() {
         headers: {
           'accept': 'application/json',
           'content-type': 'application/json',
-          'User-Agent': 'CostRouter-Token-Generator/1.0',
+          'User-Agent': 'costrouter-Token-Generator/1.0',
         },
         body: JSON.stringify({
           client_id: COPILOT_CLIENT_ID,

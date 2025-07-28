@@ -21,8 +21,8 @@ An intelligent reverse proxy for routing requests to multiple Large Language Mod
 
 1.  **Clone the repository:**
     ```bash
-    git clone https://github.com/mcowger/CostRouter.git
-    cd CostRouter
+    git clone https://github.com/mcowger/costrouter.git
+    cd costrouter
     ```
 
 2.  **Install dependencies:**

@@ -1,10 +1,10 @@
 import OpenAI from 'openai';
 
 async function generateTextExample() {
-  // Create OpenAI client configured to use the local CostRouter server
+  // Create OpenAI client configured to use the local costrouter server
   const client = new OpenAI({
     baseURL: 'http://localhost:3000/v1',
-    apiKey: 'dummy-key', // CostRouter doesn't require a real API key for local testing
+    apiKey: 'dummy-key', // costrouter doesn't require a real API key for local testing
   });
 
   try {
@@ -31,10 +31,10 @@ async function generateTextExample() {
 }
 
 async function streamingExample() {
-  // Create OpenAI client configured to use the local CostRouter server
+  // Create OpenAI client configured to use the local costrouter server
   const client = new OpenAI({
     baseURL: 'http://localhost:3000/v1',
-    apiKey: 'dummy-key', // CostRouter doesn't require a real API key for local testing
+    apiKey: 'dummy-key', // costrouter doesn't require a real API key for local testing
   });
 
   try {

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Chat completion request simulation script for CostRouter
+# Chat completion request simulation script for costrouter
 # Continuously sends real chat completion requests until stopped with Ctrl+C
 
 # Configuration
@@ -100,7 +100,7 @@ trap cleanup SIGINT SIGTERM
 echo -e "${BLUE}Checking API connectivity...${NC}"
 if ! curl -s --connect-timeout 5 "$API_URL" > /dev/null 2>&1; then
     echo -e "${RED}Error: Cannot reach API at $API_URL${NC}"
-    echo "Make sure the CostRouter server is running on localhost:3000"
+    echo "Make sure the costrouter server is running on localhost:3000"
     exit 1
 fi
 

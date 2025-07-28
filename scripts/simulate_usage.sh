@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Usage simulation script for CostRouter
+# Usage simulation script for costrouter
 # Continuously generates randomized usage data until stopped with Ctrl+C
 
 # Configuration
@@ -82,7 +82,7 @@ fi
 echo -e "${BLUE}Checking API connectivity...${NC}"
 if ! curl -s --connect-timeout 5 "$API_URL" > /dev/null 2>&1; then
     echo -e "${RED}Error: Cannot reach API at $API_URL${NC}"
-    echo "Make sure the CostRouter server is running on localhost:3000"
+    echo "Make sure the costrouter server is running on localhost:3000"
     exit 1
 fi
 
