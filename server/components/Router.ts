@@ -113,7 +113,7 @@ export class Router {
     return candidates.sort((a, b) => {
       const pricingA = priceData.getPriceWithOverride(a.provider as any, a.model);
       const pricingB = priceData.getPriceWithOverride(b.provider as any, b.model);
-      
+
       const inputCostA = pricingA?.inputCostPerMillionTokens ?? Infinity;
       const inputCostB = pricingB?.inputCostPerMillionTokens ?? Infinity;
       const outputCostA = pricingA?.outputCostPerMillionTokens ?? Infinity;
@@ -122,7 +122,7 @@ export class Router {
       // Providers with undefined costs (Infinity) should be sorted last
       const aHasUndefined = inputCostA === Infinity || outputCostA === Infinity;
       const bHasUndefined = inputCostB === Infinity || outputCostB === Infinity;
-      
+
       if (aHasUndefined && !bHasUndefined) return 1;
       if (!aHasUndefined && bHasUndefined) return -1;
 
@@ -210,41 +210,62 @@ export class Router {
     return items[randomIndex];
   }
 
-  public async chooseProvider(req: Request, res: Response, next: NextFunction) {
-    const modelname = req.body.model;
-    logger.debug(`Finding a provider for model: ${modelname}`);
+  public async getBestProviderForModel(
+    modelName: string,
+  ): Promise<{ provider: Provider; model: Model } | { error: string; status: number }> {
+    logger.debug(`Finding a provider for model: ${modelName}`);
 
-    const candidates = this.getProvidersForModel(modelname);
+    const candidates = this.getProvidersForModel(modelName);
     if (!candidates || candidates.length === 0) {
-      logger.warn(`No configured provider found for model: ${modelname}`);
-      return res
-        .status(404)
-        .json({ error: `No configured provider found for model: ${modelname}` });
+      logger.warn(`No configured provider found for model: ${modelName}`);
+      return {
+        error: `No configured provider found for model: ${modelName}`,
+        status: 404,
+      };
     }
     logger.debug(
       `Identified candidate providers: ${candidates.map((c) => c.provider.id).join(", ")}`,
     );
 
-    const availableCandidates = await this.filterAvailableCandidates(candidates, modelname);
+    const availableCandidates = await this.filterAvailableCandidates(
+      candidates,
+      modelName,
+    );
     if (availableCandidates.length === 0) {
-      logger.error(`All providers for model '${modelname}' are at their rate limits.`);
-      return res.status(503).json({
-        error: `All providers for model '${modelname}' are currently at their rate limit. Please try again later.`,
-      });
+      logger.error(`All providers for model '${modelName}' are at their rate limits.`);
+      return {
+        error: `All providers for model '${modelName}' are currently at their rate limit. Please try again later.`,
+        status: 503,
+      };
     }
 
     const { zeroCost, paid } = this.partitionCandidatesByCost(availableCandidates);
     const selectedCandidate = this.selectBestCandidate(zeroCost, paid);
 
     if (!selectedCandidate) {
-      logger.error(`Failed to select a provider from available candidates for model: ${modelname}`);
-      return res.status(500).json({ error: "Failed to select a suitable provider." });
+      logger.error(
+        `Failed to select a provider from available candidates for model: ${modelName}`,
+      );
+      return { error: "Failed to select a suitable provider.", status: 500 };
     }
 
     const { provider, model } = selectedCandidate;
-    logger.debug(`Selected provider '${provider.id}' for model '${modelname}' (real name: '${model.name}').`);
-    res.locals.chosenProvider = provider;
-    res.locals.chosenModel = model;
+    logger.debug(
+      `Selected provider '${provider.id}' for model '${modelName}' (real name: '${model.name}').`,
+    );
+    return { provider, model };
+  }
+
+  public async chooseProvider(req: Request, res: Response, next: NextFunction) {
+    const modelName = req.body.model;
+    const result = await this.getBestProviderForModel(modelName);
+
+    if ("error" in result) {
+      return res.status(result.status).json({ error: result.error });
+    }
+
+    res.locals.chosenProvider = result.provider;
+    res.locals.chosenModel = result.model;
     return next();
   }
 }

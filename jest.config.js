@@ -8,7 +8,7 @@ export default {
     '**/?(*.)+(spec|test).ts'
   ],
   transform: {
-    '^.+\\.ts$': ['ts-jest', {
+    '^.+\\.[tj]s$': ['ts-jest', {
       useESM: true,
       tsconfig: {
         module: 'ESNext',
@@ -20,7 +20,7 @@ export default {
     }]
   },
   transformIgnorePatterns: [
-    'node_modules/(?!(lowdb|date-fns|ai|@ai-sdk)/)'
+    'node_modules/(?!(lowdb|steno|date-fns|ai|@ai-sdk|p-queue|p-timeout)/)'
   ],
   moduleNameMapper: {
     '^(\\.{1,2}/.*)\\.js$': '$1',

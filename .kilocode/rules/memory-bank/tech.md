@@ -20,7 +20,7 @@ This document outlines the key technologies, libraries, and tools used in the LL
 *   **Rate-Limiter-Flexible**: A library to manage and enforce rate limits for each provider based on requests and token counts.
 *   **Zod**: A TypeScript-first schema declaration and validation library. It is used to validate the structure and types of the main `config.jsonc` file.
 *   **Pino**: A high-performance, low-overhead logger used for all application logging, configured with `pino-pretty` for development.
-*   **lowdb**: A lightweight JSON database used for persisting historical usage data.
+*   **lowdb**: A lightweight JSON database used for persisting historical usage data and application configuration.
 *   **yargs**: A library for building interactive command-line tools, used here to parse command-line arguments.
 
 ## Frontend (Vue.js)

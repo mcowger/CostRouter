@@ -37,7 +37,7 @@ async function main() {
 
   // --- 2. Initialize Singletons in Order ---
   await ConfigManager.initialize({ databasePath: argv.configDatabase as string });
-  
+
   // Apply log level from config if available, otherwise use CLI argument
   try {
     const config = ConfigManager.getInstance().getConfig();
@@ -144,18 +144,18 @@ async function main() {
   app.post("/admin/reload", async (_req, res) => {
     try {
       logger.info("Configuration reload requested via API endpoint");
-      
+
       // Persist current usage state before reloading
       await UsageManager.getInstance().persistLimiterState();
       logger.info("Usage state persisted successfully");
-      
+
       // Reload the configuration from disk
       await ConfigManager.getInstance().reloadConfig();
       logger.info("Configuration reloaded from disk");
-      
+
       // The UsageManager will automatically update limiters via the configUpdated event
       // Router and other components will automatically use the new config
-      
+
       res.json({ message: "Configuration reloaded successfully." });
     } catch (error) {
       const message = getErrorMessage(error);
@@ -185,10 +185,10 @@ async function main() {
 
       PinoLogger.setLogLevel(level);
       logger.info(`Log level changed to: ${level}`);
-      
-      res.json({ 
+
+      res.json({
         message: `Log level successfully changed to ${level}`,
-        level: level 
+        level: level
       });
     } catch (error) {
       const message = getErrorMessage(error);
@@ -280,6 +280,53 @@ async function main() {
       const message = getErrorMessage(error);
       logger.error(`Failed to get current usage data: ${message}`);
       res.status(500).json({ error: "Failed to retrieve current usage data." });
+    }
+  });
+
+  app.get("/usage/model/:modelName", async (req, res) => {
+    try {
+      const { modelName } = req.params;
+      logger.debug(`Fetching usage for best provider for model: ${modelName}`);
+
+      // 1. Find the best provider for the model
+      const providerResult = await router.getBestProviderForModel(modelName);
+
+      // 2. Handle router errors (e.g., model not found, all providers at limit)
+      if ("error" in providerResult) {
+        return res.status(providerResult.status).json({ error: providerResult.error });
+      }
+
+      const { provider, model } = providerResult;
+
+      // 3. Get usage data for all providers
+      const allUsageData = await usageManager.getCurrentUsageData();
+
+      // 4. Find the specific provider's usage
+      const providerUsage = allUsageData.providers.find(p => p.id === provider.id);
+      if (!providerUsage) {
+        logger.error(`Could not find usage data for selected provider ID: ${provider.id}`);
+        return res.status(500).json({ error: "Could not find usage data for the selected provider." });
+      }
+
+      // 5. Find the specific model's usage within that provider
+      const modelUsage = providerUsage.models.find(m => m.name === model.name);
+      if (!modelUsage) {
+        logger.error(`Could not find usage data for model '${model.name}' in provider '${provider.id}'`);
+        return res.status(500).json({ error: "Could not find usage data for the selected model." });
+      }
+
+      // 6. Construct and send the final response
+      const responsePayload = {
+        providerId: provider.id,
+        model: modelUsage,
+      };
+
+      res.json(responsePayload);
+
+    } catch (error) {
+      const message = getErrorMessage(error);
+      logger.error(`Failed to get model usage data: ${message}`);
+      res.status(500).json({ error: "Failed to retrieve model usage data." });
     }
   });
 

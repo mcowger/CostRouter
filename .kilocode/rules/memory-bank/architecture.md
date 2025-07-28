@@ -70,7 +70,7 @@ The system is composed of several key singleton classes found in `server/compone
 
 ## Request Lifecycle (The Pipeline)
 
-1.  **Startup**: When `server/index.ts` is run, the `main` function initializes the singletons in the correct order: `ConfigManager`, `PriceData`, `UsageManager`, `UsageDatabaseManager`, and `Router`.
+1.  **Startup**: When `server/index.ts` is run, the `main` function initializes the singletons in the correct order: `ConfigManager`, `PriceData`, `UsageManager`, and `Router`.
 2.  **Request Reception**: The Express server receives a `POST` request on `/v1/chat/completions`.
 3.  **Routing (`Router.chooseProvider`)**:
     *   The `Router` middleware identifies candidate providers for the requested model.
@@ -84,7 +84,7 @@ The system is composed of several key singleton classes found in `server/compone
     *   It uses a factory pattern to get the correct Vercel AI SDK instance for the provider's `type` (e.g., `createOpenAI`, `createAnthropic`).
     *   It uses the `ai-sdk` (`streamText` or `generateText`) to make the final API call.
     *   It streams the response back to the original client in the standard OpenAI format.
-5.  **Usage Tracking**: After the stream is complete, the `UnifiedExecutor` calculates the cost and calls `UsageManager.consume()` to update the rate limit counters and `UsageDatabaseManager.recordUsage()` to persist the data.
+5.  **Usage Tracking**: After the stream is complete, the `UnifiedExecutor` calculates the cost and calls `UsageManager.consume()` to update the rate limit counters.
 
 ## Source Code Paths
 
