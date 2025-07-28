@@ -7,7 +7,7 @@ import { ConfigManager } from "./components/config/ConfigManager";
 import { PriceData } from "./components/PriceData";
 import { Router } from "./components/Router";
 import { UsageManager } from "./components/UsageManager";
-import { logger, responseBodyLogger, requestResponseLogger } from "./components/Logger";
+import { logger, responseBodyLogger, requestResponseLogger, PinoLogger } from "./components/Logger";
 import { UnifiedExecutor } from "./components/UnifiedExecutor";
 import { getErrorMessage } from "./components/Utils";
 
@@ -32,10 +32,23 @@ async function main() {
     })
     .parse();
 
+  // Set initial log level from CLI argument
   logger.level = argv.loglevel;
 
   // --- 2. Initialize Singletons in Order ---
   await ConfigManager.initialize({ databasePath: argv.configDatabase as string });
+  
+  // Apply log level from config if available, otherwise use CLI argument
+  try {
+    const config = ConfigManager.getInstance().getConfig();
+    const configLogLevel = config.logLevel;
+    const finalLogLevel = configLogLevel || argv.loglevel;
+    PinoLogger.setLogLevel(finalLogLevel);
+    logger.info(`Log level set to: ${finalLogLevel}${configLogLevel ? ' (from config)' : ' (from CLI)'}`);
+  } catch (error) {
+    logger.warn(`Failed to apply config log level, using CLI argument: ${argv.loglevel}`);
+    PinoLogger.setLogLevel(argv.loglevel);
+  }
   PriceData.initialize();
   await UsageManager.initialize();
   Router.initialize();
@@ -128,7 +141,40 @@ async function main() {
     }
   });
 
-  // --- 7. Copilot Auth API Routes ---
+  // --- 7. Logging Admin API Routes ---
+  app.get("/admin/logging/level", (_req, res) => {
+    try {
+      const currentLevel = PinoLogger.getCurrentLogLevel();
+      res.json({ level: currentLevel });
+    } catch (error) {
+      const message = getErrorMessage(error);
+      logger.error(`Failed to get current log level: ${message}`);
+      res.status(500).json({ error: "Failed to retrieve current log level." });
+    }
+  });
+
+  app.post("/admin/logging/level", (req, res) => {
+    try {
+      const { level } = req.body;
+      if (!level || typeof level !== 'string') {
+        return res.status(400).json({ error: "Log level is required and must be a string." });
+      }
+
+      PinoLogger.setLogLevel(level);
+      logger.info(`Log level changed to: ${level}`);
+      
+      res.json({ 
+        message: `Log level successfully changed to ${level}`,
+        level: level 
+      });
+    } catch (error) {
+      const message = getErrorMessage(error);
+      logger.error(`Failed to set log level: ${message}`);
+      res.status(400).json({ error: message });
+    }
+  });
+
+  // --- 8. Copilot Auth API Routes ---
   app.post("/api/copilot/auth/start", async (_req, res) => {
     try {
       const response = await fetch(COPILOT_DEVICE_CODE_URL, {
@@ -201,7 +247,7 @@ async function main() {
   });
 
 
-  // --- 8. Usage Dashboard API Route ---
+  // --- 9. Usage Dashboard API Route ---
   app.get("/usage/current", async (_req, res) => {
     try {
       const usageData = await usageManager.getCurrentUsageData();
@@ -213,7 +259,36 @@ async function main() {
     }
   });
 
-  // --- 9. Test Usage Simulation Route (for testing the dashboard) ---
+  // --- 9.5. Logging Admin API Routes ---
+  app.get("/admin/logging/level", (_req, res) => {
+    try {
+      const currentLevel = PinoLogger.getCurrentLogLevel();
+      res.json({ level: currentLevel });
+    } catch (error) {
+      const message = getErrorMessage(error);
+      logger.error(`Failed to get log level: ${message}`);
+      res.status(500).json({ error: "Failed to retrieve log level." });
+    }
+  });
+
+  app.post("/admin/logging/level", (req, res) => {
+    try {
+      const { level } = req.body;
+      if (!level || typeof level !== 'string') {
+        return res.status(400).json({ error: "Log level is required and must be a string." });
+      }
+
+      PinoLogger.setLogLevel(level);
+      logger.info(`Log level changed to: ${level}`);
+      res.json({ message: `Log level successfully changed to ${level}`, level });
+    } catch (error) {
+      const message = getErrorMessage(error);
+      logger.error(`Failed to set log level: ${message}`);
+      res.status(400).json({ error: message });
+    }
+  });
+
+  // --- 10. Test Usage Simulation Route (for testing the dashboard) ---
   app.post("/usage/simulate", async (req, res) => {
     try {
       const { providerId = "openroutera", model = "moonshotai/kimi-k2:free", tokens = 100, cost = 0.01 } = req.body;

@@ -2,6 +2,9 @@
   <div class="configuration">
     <h2>Provider Configuration</h2>
 
+    <!-- Logging Settings Section -->
+    <LoggingSettings />
+
     <!-- Save Button Section -->
     <div v-if="!isLoading && !error" class="save-section">
       <button
@@ -59,6 +62,7 @@ import type { AppConfig } from '../../../schemas/appConfig.schema';
 import { AppConfigSchema } from '../../../schemas/appConfig.schema';
 import type { Provider } from '../../../schemas/provider.schema';
 import ProviderCard from './ProviderCard.vue';
+import LoggingSettings from './LoggingSettings.vue';
 
 const config = ref<AppConfig>({ providers: [] });
 const isLoading = ref<boolean>(true);

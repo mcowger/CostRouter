@@ -19,6 +19,12 @@ export const AppConfigSchema = z.object({
     points: z.number().int().nonnegative(),
     ms: z.number().int().nonnegative(),
   })).optional(),
+
+  /** 
+   * The logging level for the application.
+   * Controls the verbosity of server logs.
+   */
+  logLevel: z.enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal']).default('info').optional(),
 });
 
 /**

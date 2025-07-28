@@ -6,6 +6,7 @@ export const useConfigStore = defineStore('config', () => {
   const config = ref<AppConfig | null>(null);
   const loading = ref(false);
   const error = ref<string | null>(null);
+  const logLevel = ref<string>('info');
 
   async function fetchConfig() {
     loading.value = true;
@@ -52,5 +53,51 @@ export const useConfigStore = defineStore('config', () => {
     }
   }
 
-  return { config, loading, error, fetchConfig, updateProviderOAuthToken };
+  async function fetchCurrentLogLevel() {
+    try {
+      const response = await fetch('http://localhost:3000/admin/logging/level');
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+      logLevel.value = data.level;
+      return data.level;
+    } catch (e: any) {
+      error.value = e.message;
+      throw e;
+    }
+  }
+
+  async function updateLogLevel(level: string) {
+    try {
+      const response = await fetch('http://localhost:3000/admin/logging/level', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ level }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      logLevel.value = level;
+      return data;
+    } catch (e: any) {
+      error.value = e.message;
+      throw e;
+    }
+  }
+
+  return { 
+    config, 
+    loading, 
+    error, 
+    logLevel,
+    fetchConfig, 
+    updateProviderOAuthToken,
+    fetchCurrentLogLevel,
+    updateLogLevel 
+  };
 });

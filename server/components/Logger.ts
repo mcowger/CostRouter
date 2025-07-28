@@ -137,6 +137,39 @@ export class PinoLogger {
     }
     PinoLogger.options = options;
   }
+
+  /**
+   * Dynamically change the log level of the current logger instance
+   */
+  public static setLogLevel(level: string): void {
+    const validLevels = ['trace', 'debug', 'info', 'warn', 'error', 'fatal'];
+    if (!validLevels.includes(level)) {
+      throw new Error(`Invalid log level: ${level}. Valid levels: ${validLevels.join(', ')}`);
+    }
+
+    if (PinoLogger.instance) {
+      PinoLogger.instance.level = level;
+    }
+    // Also update the stored options for future instances
+    PinoLogger.options.level = level;
+  }
+
+  /**
+   * Get the current log level
+   */
+  public static getCurrentLogLevel(): string {
+    if (PinoLogger.instance) {
+      return PinoLogger.instance.level;
+    }
+    return PinoLogger.options.level || 'info';
+  }
+
+  /**
+   * Check if the logger is initialized
+   */
+  public static isInitialized(): boolean {
+    return !!PinoLogger.instance;
+  }
 }
 
 export const logger = PinoLogger.getLogger();
