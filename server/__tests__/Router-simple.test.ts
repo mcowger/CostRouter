@@ -22,20 +22,6 @@ jest.mock('../components/UsageManager.js', () => ({
 }));
 
 // Mock PriceData
-jest.mock('../components/PriceData.js', () => ({
-  PriceData: {
-    getInstance: jest.fn().mockReturnValue({
-      getPriceWithOverride: jest.fn().mockReturnValue({
-        inputCostPerMillionTokens: 1,
-        outputCostPerMillionTokens: 2,
-      }),
-    }),
-    initialize: jest.fn(),
-  }
-}));
-
-
-// Mock PriceData
 jest.mock('../components/PriceData.js', () => {
   let mockInstance;
   const mockPriceData = {
@@ -123,17 +109,8 @@ describe('Router - Basic Tests', () => {
 
   const createMockNext = () => jest.fn();
 
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
-
-  afterEach(() => {
-    // Reset router singleton
-    const Router = require('../components/Router.js').Router;
-    (Router as any).instance = null;
-  });
-
   beforeEach(async () => {
+    jest.clearAllMocks();
     const { ConfigManager } = await import('../components/config/ConfigManager.js');
     const { UsageManager } = await import('../components/UsageManager.js');
     const { PriceData } = await import('../components/PriceData.js');
