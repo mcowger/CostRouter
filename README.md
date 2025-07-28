@@ -4,7 +4,7 @@ An intelligent reverse proxy for routing requests to multiple Large Language Mod
 
 ## Features
 
-*   **Intelligent Routing**: Automatically selects providers based on model availability and rate-limit tracking.
+*   **Intelligent Routing**: Automatically selects providers using a cost-optimized algorithm that prioritizes zero-cost providers and selects the lowest-cost paid options when needed.
 *   **Real-time Monitoring**: A Vue.js dashboard provides a live view of usage statistics, including requests, tokens, and cost per provider.
 *   **Dynamic Configuration**: Update provider settings, models, and limits from the UI without restarting the server.
 *   **Extensive Provider Support**: Natively supports a wide range of LLM providers through the Vercel AI SDK, including OpenAI, Anthropic, Google, Groq, Mistral, claude-code, gemini-cli, and any OpenAI-compatible API.
@@ -79,12 +79,30 @@ curl -X POST http://localhost:3000/v1/chat/completions \
   }'
 ```
 
+## Provider Selection Algorithm
+
+The gateway uses an intelligent, cost-optimized routing algorithm that works as follows:
+
+1. **Model Matching**: Identifies all providers that support the requested model (by name or mapped name)
+2. **Rate Limit Filtering**: Removes providers that have exceeded their configured rate limits
+3. **Cost-Based Partitioning**: Separates remaining providers into two groups:
+   - **Zero-cost providers**: Those with all pricing fields explicitly set to 0
+   - **Paid providers**: All others, including those with undefined/unknown pricing
+4. **Selection Strategy**:
+   - If zero-cost providers are available, randomly selects one to distribute load
+   - Otherwise, selects the lowest-cost paid provider based on:
+     - Primary sort: Input cost per million tokens
+     - Secondary sort: Output cost per million tokens
+     - Providers with undefined costs are deprioritized (sorted last)
+
+This algorithm ensures cost optimization while maintaining high availability through intelligent failover.
+
 ## Architecture
 
 The gateway uses a pipeline pattern with singleton managers for core services:
 *   **`ConfigManager`**: Loads and validates configuration.
 *   **`UsageManager`**: Tracks and enforces rate limits in real-time.
-*   **`Router`**: Selects the optimal provider for each incoming request.
+*   **`Router`**: Selects the optimal provider for each incoming request using the cost-optimized algorithm.
 *   **`UnifiedExecutor`**: Executes the request against the chosen provider using the Vercel AI SDK.
 *   **`UsageDatabaseManager`**: Persists usage data for historical analysis.
 
