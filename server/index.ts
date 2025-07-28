@@ -63,8 +63,8 @@ async function main() {
   // --- 3. Express Server Setup ---
   // Initialize Express application
   const app = express();
-  // Enable JSON body parsing for incoming requests
-  app.use(express.json());
+  // Enable JSON body parsing for incoming requests with increased size limit
+  app.use(express.json({ limit: '5mb' }));
   app.use(cors());
 
   // Apply response body logging middleware
