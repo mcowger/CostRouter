@@ -156,7 +156,27 @@ const saveConfiguration = async (): Promise<void> => {
     saveMessage.value = result.message || 'Configuration saved successfully!';
     saveMessageType.value = 'success';
 
-    // Clear success message after 3 seconds
+    // Reload the configuration to apply changes
+    try {
+      const reloadResponse = await fetch('http://localhost:3000/admin/reload', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (reloadResponse.ok) {
+        saveMessage.value = 'Configuration saved and reloaded successfully!';
+      } else {
+        saveMessage.value = 'Configuration saved, but reload failed. Changes may not be active.';
+        saveMessageType.value = 'error';
+      }
+    } catch (reloadError) {
+      saveMessage.value = 'Configuration saved, but reload failed. Changes may not be active.';
+      saveMessageType.value = 'error';
+    }
+
+    // Clear message after 3 seconds
     setTimeout(() => {
       saveMessage.value = '';
     }, 3000);

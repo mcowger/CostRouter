@@ -3,8 +3,8 @@ import { Low } from 'lowdb';
 import { JSONFile } from 'lowdb/node';
 import { AppConfig, AppConfigSchema } from '#schemas/appConfig.schema';
 import { Provider } from '#schemas/provider.schema';
-import { IConfigManager, LimiterState } from './IConfigManager';
-import { logger } from '../Logger';
+import { IConfigManager, LimiterState } from './IConfigManager.js';
+import { logger } from '../Logger.js';
 
 /**
  * Manages application configuration using a LowDB JSON file.
@@ -37,16 +37,20 @@ export class DatabaseConfigManager implements IConfigManager {
     if (instance.db.data.limiterState) {
       for (const key in instance.db.data.limiterState) {
         const entry = instance.db.data.limiterState[key];
-        // The rate-limiter-flexible library can leave empty objects {} in the store.
-        // We need to clean these up before parsing with Zod.
-        if (
-          !entry ||
-          typeof entry.points !== 'number' ||
-          typeof entry.ms !== 'number'
-        ) {
+        // Only remove entries that are truly invalid (null, undefined, or non-objects)
+        // Empty objects {} are valid - they represent "no limit configured" for this key
+        if (!entry || typeof entry !== 'object') {
           logger.warn(`Removing invalid limiter state entry for key: ${key}`);
           delete instance.db.data.limiterState[key];
+        } else if (Object.keys(entry).length > 0) {
+          // If the entry has properties, validate they are correct types
+          // If not, silently remove without warning
+          if (!('points' in entry) || !('ms' in entry) || 
+              typeof entry.points !== 'number' || typeof entry.ms !== 'number') {
+            delete instance.db.data.limiterState[key];
+          }
         }
+        // Empty objects {} are kept as valid "no limit configured" entries
       }
     } else {
       // If limiterState is missing, initialize it to prevent data loss on write.
@@ -76,8 +80,45 @@ export class DatabaseConfigManager implements IConfigManager {
     Object.assign(this.db.data, validatedConfig);
     await this.db.write();
 
-    this.events.emit('config-updated', this.config);
+    this.events.emit('configUpdated', this.config);
     logger.info("Configuration has been updated and saved to the database.");
+  }
+
+  public async reloadConfig(): Promise<void> {
+    logger.info("Reloading configuration from database...");
+    
+    // Re-read the configuration from disk
+    await this.db.read();
+    
+    // Sanitize limiterState (same logic as initialization)
+    if (this.db.data.limiterState) {
+      for (const key in this.db.data.limiterState) {
+        const entry = this.db.data.limiterState[key];
+        // Only remove entries that are truly invalid (null, undefined, or non-objects)
+        // Empty objects {} are valid - they represent "no limit configured" for this key
+        if (!entry || typeof entry !== 'object') {
+          logger.warn(`Removing invalid limiter state entry for key: ${key}`);
+          delete this.db.data.limiterState[key];
+        } else if (Object.keys(entry).length > 0) {
+          // If the entry has properties, validate they are correct types
+          // If not, silently remove without warning
+          if (!('points' in entry) || !('ms' in entry) || 
+              typeof entry.points !== 'number' || typeof entry.ms !== 'number') {
+            delete this.db.data.limiterState[key];
+          }
+        }
+        // Empty objects {} are kept as valid "no limit configured" entries
+      }
+    } else {
+      this.db.data.limiterState = {};
+    }
+
+    // Validate and update the config
+    this.config = AppConfigSchema.parse(this.db.data);
+    
+    // Emit the configUpdated event so other components can react
+    this.events.emit('configUpdated', this.config);
+    logger.info("Configuration reloaded successfully from database.");
   }
 
   public async getLimiterState(): Promise<LimiterState | undefined> {

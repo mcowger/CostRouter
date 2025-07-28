@@ -1,10 +1,10 @@
 import { Provider } from "#schemas/provider.schema";
 import { Model } from "#schemas/model.schema";
-import { ConfigManager } from "./config/ConfigManager";
-import { logger } from "./Logger";
+import { ConfigManager } from "./config/ConfigManager.js";
+import { logger } from "./Logger.js";
 import { Request, Response, NextFunction } from "express";
-import { UsageManager } from "./UsageManager";
-import { PriceData } from "./PriceData";
+import { UsageManager } from "./UsageManager.js";
+import { PriceData } from "./PriceData.js";
 
 export class Router {
   private static instance: Router;

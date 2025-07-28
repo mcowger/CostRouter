@@ -3,13 +3,13 @@ import cors from "cors";
 import yargs from "yargs/yargs";
 import { hideBin } from "yargs/helpers";
 import path from 'path';
-import { ConfigManager } from "./components/config/ConfigManager";
-import { PriceData } from "./components/PriceData";
-import { Router } from "./components/Router";
-import { UsageManager } from "./components/UsageManager";
-import { logger, responseBodyLogger, requestResponseLogger, PinoLogger } from "./components/Logger";
-import { UnifiedExecutor } from "./components/UnifiedExecutor";
-import { getErrorMessage } from "./components/Utils";
+import { ConfigManager } from "./components/config/ConfigManager.js";
+import { PriceData } from "./components/PriceData.js";
+import { Router } from "./components/Router.js";
+import { UsageManager } from "./components/UsageManager.js";
+import { logger, responseBodyLogger, requestResponseLogger, PinoLogger } from "./components/Logger.js";
+import { UnifiedExecutor } from "./components/UnifiedExecutor.js";
+import { getErrorMessage } from "./components/Utils.js";
 
 const COPILOT_CLIENT_ID = 'Iv1.b507a08c87ecfe98';
 const COPILOT_DEVICE_CODE_URL = 'https://github.com/login/device/code';
@@ -141,6 +141,29 @@ async function main() {
     }
   });
 
+  app.post("/admin/reload", async (_req, res) => {
+    try {
+      logger.info("Configuration reload requested via API endpoint");
+      
+      // Persist current usage state before reloading
+      await UsageManager.getInstance().persistLimiterState();
+      logger.info("Usage state persisted successfully");
+      
+      // Reload the configuration from disk
+      await ConfigManager.getInstance().reloadConfig();
+      logger.info("Configuration reloaded from disk");
+      
+      // The UsageManager will automatically update limiters via the configUpdated event
+      // Router and other components will automatically use the new config
+      
+      res.json({ message: "Configuration reloaded successfully." });
+    } catch (error) {
+      const message = getErrorMessage(error);
+      logger.error(`Failed to reload configuration: ${message}`);
+      res.status(500).json({ error: "Failed to reload configuration." });
+    }
+  });
+
   // --- 7. Logging Admin API Routes ---
   app.get("/admin/logging/level", (_req, res) => {
     try {
@@ -250,6 +273,7 @@ async function main() {
   // --- 9. Usage Dashboard API Route ---
   app.get("/usage/current", async (_req, res) => {
     try {
+      logger.debug("Fetching current usage data");
       const usageData = await usageManager.getCurrentUsageData();
       res.json(usageData);
     } catch (error) {

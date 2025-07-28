@@ -43,7 +43,12 @@ export const requestResponseLogger = (
     requestLogObject.messagePreview = lodash.get(body, "messages[0]");
     logger.debug(requestLogObject, `--> ${method} ${url}`);
   } else if (logger.isLevelEnabled("info")) {
-    logger.info(null, `--> ${method} ${url}`);
+    // Log /usage/current requests at debug level to reduce noise
+    if (url === '/usage/current') {
+      logger.debug(null, `--> ${method} ${url}`);
+    } else {
+      logger.info(null, `--> ${method} ${url}`);
+    }
   }
 
   const startTime = Date.now();
@@ -98,10 +103,18 @@ export const requestResponseLogger = (
         `<-- ${method} ${url} ${statusCode} ${duration}ms`,
       );
     } else if (logger.isLevelEnabled("info")) {
-      logger.info(
-        null,
-        `<-- ${method} ${url} ${statusCode} ${duration}ms`,
-      );
+      // Log /usage/current responses at debug level to reduce noise
+      if (url === '/usage/current') {
+        logger.debug(
+          null,
+          `<-- ${method} ${url} ${statusCode} ${duration}ms`,
+        );
+      } else {
+        logger.info(
+          null,
+          `<-- ${method} ${url} ${statusCode} ${duration}ms`,
+        );
+      }
     }
   });
 

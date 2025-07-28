@@ -1,5 +1,5 @@
-import { IConfigManager, LimiterState } from './IConfigManager';
-import { DatabaseConfigManager } from './DatabaseConfigManager';
+import { IConfigManager, LimiterState } from './IConfigManager.js';
+import { DatabaseConfigManager } from './DatabaseConfigManager.js';
 import { AppConfig } from '#schemas/appConfig.schema.js';
 import { Provider } from '#schemas/provider.schema.js';
 import EventEmitter from 'events';
@@ -40,6 +40,11 @@ export class ConfigManager implements IConfigManager {
   public updateConfig(newConfig: AppConfig): Promise<void> {
     return ConfigManager.instance.updateConfig(newConfig);
   }
+
+  public reloadConfig(): Promise<void> {
+    return ConfigManager.instance.reloadConfig();
+  }
+  
   public getLimiterState(): Promise<LimiterState | undefined> {
     return ConfigManager.instance.getLimiterState();
   }

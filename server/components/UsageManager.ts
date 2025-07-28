@@ -1,12 +1,12 @@
 import { RateLimiterMemory, IRateLimiterOptions } from "rate-limiter-flexible";
-import { ConfigManager } from "./config/ConfigManager";
-import { LimiterState } from "./config/IConfigManager";
+import { ConfigManager } from "./config/ConfigManager.js";
+import { LimiterState } from "./config/IConfigManager.js";
 import { Provider } from "#schemas/provider.schema";
 import { Model } from "#schemas/model.schema";
 import { AppConfig } from "#schemas/appConfig.schema";
-import { logger } from "./Logger";
+import { logger } from "./Logger.js";
 import { Limits } from "#schemas/limits.schema.js";
-import { getErrorMessage, formatDuration } from "./Utils";
+import { getErrorMessage, formatDuration } from "./Utils.js";
 
 type LimitType = keyof Limits;
 
@@ -401,8 +401,10 @@ export class UsageManager {
       let loadedCount = 0;
       for (const limiterKey in state) {
         const limiter = this.limiters.get(limiterKey);
-        const { points, ms } = state[limiterKey];
-        if (limiter) {
+        const stateEntry = state[limiterKey];
+        // Only restore state for entries that have points and ms (skip empty objects)
+        if (limiter && 'points' in stateEntry && 'ms' in stateEntry) {
+          const { points, ms } = stateEntry;
           const consumeKey = limiterKey.substring(0, limiterKey.lastIndexOf('/'));
           // Directly set the internal state. This is a "hack" but the only way.
           (limiter as any)._memoryStorage.set(consumeKey, { points, ms });
@@ -437,7 +439,7 @@ export class UsageManager {
       }
 
       await ConfigManager.getInstance().storeLimiterState(state);
-      logger.info(`Successfully persisted state for ${this.limiters.size} limiters.`);
+      logger.debug(`Successfully persisted state for ${this.limiters.size} limiters.`);
 
     } catch (error) {
       logger.error(`Failed to persist limiter state: ${getErrorMessage(error)}`);
