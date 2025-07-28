@@ -710,16 +710,12 @@ describe('Router - Basic Tests', () => {
     (UsageManager.getInstance as jest.MockedFunction<any>).mockReturnValue(mockUsageManager);
     mockUsageManager.isUnderLimit.mockResolvedValue(true);
 
-    // This mock is designed to expose the bug: providers with incomplete pricing
-    // are not considered zero-cost and are then sorted as infinitely expensive.
     (PriceData.getInstance as jest.MockedFunction<any>).mockReturnValue({
-      getPriceWithOverride: jest.fn((providerType: string, model: any) => {
-        if (providerType === 'openai' || providerType === 'anthropic') {
-          // Returning an empty object simulates incomplete pricing data.
-          // This should be treated as zero-cost but is not.
-          return {};
+      getPriceWithOverride: jest.fn((provider: any, model: any) => {
+        if (provider.id === 'zero-cost-1' || provider.id === 'zero-cost-2') {
+          return { inputCostPerMillionTokens: 0, outputCostPerMillionTokens: 0 };
         }
-        if (providerType === 'google') { // cheap-paid
+        if (provider.id === 'cheap-paid') {
           return { inputCostPerMillionTokens: 0.001, outputCostPerMillionTokens: 0.002 };
         }
         return { inputCostPerMillionTokens: 1, outputCostPerMillionTokens: 2 };
@@ -741,9 +737,189 @@ describe('Router - Basic Tests', () => {
 
       expect(res.locals.chosenProvider).toBeDefined();
       const chosenId = res.locals.chosenProvider.id;
-      // This assertion is expected to fail. The bug will cause 'cheap-paid' to be chosen.
+      // Should correctly prioritize zero-cost providers over paid options
       expect(['zero-cost-1', 'zero-cost-2']).toContain(chosenId);
     }
     expect(next).toHaveBeenCalledTimes(20);
+  });
+
+  describe('Helper Functions', () => {
+    let router: any;
+
+    beforeEach(async () => {
+      const { ConfigManager } = await import('../components/config/ConfigManager.js');
+      const { UsageManager } = await import('../components/UsageManager.js');
+      const { PriceData } = await import('../components/PriceData.js');
+      const { Router } = await import('../components/Router.js');
+
+      (ConfigManager.getInstance as jest.Mock).mockReturnValue({
+        getProviders: jest.fn().mockReturnValue(mockProviders),
+      });
+      (UsageManager.getInstance as jest.MockedFunction<any>).mockReturnValue(mockUsageManager);
+      (PriceData.getInstance as jest.MockedFunction<any>).mockReturnValue({
+        getPriceWithOverride: jest.fn().mockReturnValue({
+          inputCostPerMillionTokens: 1,
+          outputCostPerMillionTokens: 2,
+        }),
+      });
+
+      Router.initialize();
+      router = Router.getInstance();
+    });
+
+    describe('filterAvailableCandidates', () => {
+      it('should filter out providers that are over rate limit', async () => {
+        const candidates = [
+          { provider: mockProviders[0], model: mockProviders[0].models[0] },
+          { provider: mockProviders[1], model: mockProviders[1].models[0] },
+        ];
+
+        mockUsageManager.isUnderLimit
+          .mockResolvedValueOnce(false) // First provider over limit
+          .mockResolvedValueOnce(true);  // Second provider available
+
+        const result = await router.filterAvailableCandidates(candidates, 'test-model');
+
+        expect(result).toHaveLength(1);
+        expect(result[0].provider).toBe(mockProviders[1]);
+        expect(mockUsageManager.isUnderLimit).toHaveBeenCalledTimes(2);
+      });
+
+      it('should return all candidates when all are under limit', async () => {
+        const candidates = [
+          { provider: mockProviders[0], model: mockProviders[0].models[0] },
+          { provider: mockProviders[1], model: mockProviders[1].models[0] },
+        ];
+
+        mockUsageManager.isUnderLimit.mockResolvedValue(true);
+
+        const result = await router.filterAvailableCandidates(candidates, 'test-model');
+
+        expect(result).toHaveLength(2);
+        expect(result).toEqual(candidates);
+      });
+
+      it('should return empty array when all providers are over limit', async () => {
+        const candidates = [
+          { provider: mockProviders[0], model: mockProviders[0].models[0] },
+          { provider: mockProviders[1], model: mockProviders[1].models[0] },
+        ];
+
+        mockUsageManager.isUnderLimit.mockResolvedValue(false);
+
+        const result = await router.filterAvailableCandidates(candidates, 'test-model');
+
+        expect(result).toHaveLength(0);
+      });
+    });
+
+    describe('partitionCandidatesByCost', () => {
+      beforeEach(() => {
+        // Mock isZeroCost method on router instance
+        router.isZeroCost = jest.fn();
+      });
+
+      it('should partition candidates into zero-cost and paid', () => {
+        const candidates = [
+          { provider: mockProviders[0], model: mockProviders[0].models[0] },
+          { provider: mockProviders[1], model: mockProviders[1].models[0] },
+          { provider: mockProviders[2], model: mockProviders[2].models[0] },
+        ];
+
+        router.isZeroCost
+          .mockReturnValueOnce(true)   // First provider is zero-cost
+          .mockReturnValueOnce(false)  // Second provider is paid
+          .mockReturnValueOnce(true);  // Third provider is zero-cost
+
+        const result = router.partitionCandidatesByCost(candidates);
+
+        expect(result.zeroCost).toHaveLength(2);
+        expect(result.paid).toHaveLength(1);
+        expect(result.zeroCost).toEqual([candidates[0], candidates[2]]);
+        expect(result.paid).toEqual([candidates[1]]);
+      });
+
+      it('should handle all zero-cost providers', () => {
+        const candidates = [
+          { provider: mockProviders[0], model: mockProviders[0].models[0] },
+          { provider: mockProviders[1], model: mockProviders[1].models[0] },
+        ];
+
+        router.isZeroCost.mockReturnValue(true);
+
+        const result = router.partitionCandidatesByCost(candidates);
+
+        expect(result.zeroCost).toHaveLength(2);
+        expect(result.paid).toHaveLength(0);
+      });
+
+      it('should handle all paid providers', () => {
+        const candidates = [
+          { provider: mockProviders[0], model: mockProviders[0].models[0] },
+          { provider: mockProviders[1], model: mockProviders[1].models[0] },
+        ];
+
+        router.isZeroCost.mockReturnValue(false);
+
+        const result = router.partitionCandidatesByCost(candidates);
+
+        expect(result.zeroCost).toHaveLength(0);
+        expect(result.paid).toHaveLength(2);
+      });
+    });
+
+    describe('selectBestCandidate', () => {
+      beforeEach(() => {
+        router.randomSelect = jest.fn();
+        router.selectBestPaidProvider = jest.fn();
+      });
+
+      it('should select from zero-cost providers when available', () => {
+        const zeroCostCandidates = [
+          { provider: mockProviders[0], model: mockProviders[0].models[0] },
+          { provider: mockProviders[1], model: mockProviders[1].models[0] },
+        ];
+        const paidCandidates = [
+          { provider: mockProviders[2], model: mockProviders[2].models[0] },
+        ];
+
+        const expectedSelection = zeroCostCandidates[0];
+        router.randomSelect.mockReturnValue(expectedSelection);
+
+        const result = router.selectBestCandidate(zeroCostCandidates, paidCandidates);
+
+        expect(router.randomSelect).toHaveBeenCalledWith(zeroCostCandidates);
+        expect(router.selectBestPaidProvider).not.toHaveBeenCalled();
+        expect(result).toBe(expectedSelection);
+      });
+
+      it('should select from paid providers when no zero-cost available', () => {
+        const zeroCostCandidates: any[] = [];
+        const paidCandidates = [
+          { provider: mockProviders[0], model: mockProviders[0].models[0] },
+          { provider: mockProviders[1], model: mockProviders[1].models[0] },
+        ];
+
+        const expectedSelection = paidCandidates[0];
+        router.selectBestPaidProvider.mockReturnValue(expectedSelection);
+
+        const result = router.selectBestCandidate(zeroCostCandidates, paidCandidates);
+
+        expect(router.randomSelect).not.toHaveBeenCalled();
+        expect(router.selectBestPaidProvider).toHaveBeenCalledWith(paidCandidates);
+        expect(result).toBe(expectedSelection);
+      });
+
+      it('should return undefined when no candidates available', () => {
+        const zeroCostCandidates: any[] = [];
+        const paidCandidates: any[] = [];
+
+        const result = router.selectBestCandidate(zeroCostCandidates, paidCandidates);
+
+        expect(router.randomSelect).not.toHaveBeenCalled();
+        expect(router.selectBestPaidProvider).not.toHaveBeenCalled();
+        expect(result).toBeUndefined();
+      });
+    });
   });
 });

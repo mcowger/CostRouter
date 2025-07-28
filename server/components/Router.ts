@@ -110,39 +110,93 @@ export class Router {
 
     const priceData = PriceData.getInstance();
 
-    // Map candidates to a structure that includes costs for stable sorting.
-    const pricedCandidates = candidates.map(candidate => {
-      // The paid-provider tests expect the full provider object.
-      const pricing = priceData.getPriceWithOverride(candidate.provider as any, candidate.model);
-      return {
-        candidate, // Keep reference to original object
-        inputCost: pricing?.inputCostPerMillionTokens ?? Infinity,
-        outputCost: pricing?.outputCostPerMillionTokens ?? Infinity,
-      };
-    });
+    return candidates.sort((a, b) => {
+      const pricingA = priceData.getPriceWithOverride(a.provider as any, a.model);
+      const pricingB = priceData.getPriceWithOverride(b.provider as any, b.model);
+      
+      const inputCostA = pricingA?.inputCostPerMillionTokens ?? Infinity;
+      const inputCostB = pricingB?.inputCostPerMillionTokens ?? Infinity;
+      const outputCostA = pricingA?.outputCostPerMillionTokens ?? Infinity;
+      const outputCostB = pricingB?.outputCostPerMillionTokens ?? Infinity;
 
-    // Sort by whether the provider has a full set of prices, then by cost.
-    pricedCandidates.sort((a, b) => {
-      const aHasInfinity = a.inputCost === Infinity || a.outputCost === Infinity;
-      const bHasInfinity = b.inputCost === Infinity || b.outputCost === Infinity;
+      // Providers with undefined costs (Infinity) should be sorted last
+      const aHasUndefined = inputCostA === Infinity || outputCostA === Infinity;
+      const bHasUndefined = inputCostB === Infinity || outputCostB === Infinity;
+      
+      if (aHasUndefined && !bHasUndefined) return 1;
+      if (!aHasUndefined && bHasUndefined) return -1;
 
-      // If one has an infinite cost and the other doesn't, the one without infinity comes first.
-      if (aHasInfinity && !bHasInfinity) {
-        return 1; // a is "more expensive", so it comes after b
+      // Both have complete pricing or both have undefined - sort by cost
+      if (inputCostA !== inputCostB) {
+        return inputCostA - inputCostB;
       }
-      if (!aHasInfinity && bHasInfinity) {
-        return -1; // a is "cheaper", so it comes before b
-      }
+      return outputCostA - outputCostB;
+    })[0];
+  }
 
-      // If both have/don't have infinite costs, sort by price.
-      if (a.inputCost !== b.inputCost) {
-        return a.inputCost - b.inputCost;
+  /**
+   * Filters candidates to only those under rate limits.
+   */
+  private async filterAvailableCandidates(
+    candidates: { provider: Provider; model: Model }[],
+    modelname: string
+  ): Promise<{ provider: Provider; model: Model }[]> {
+    const availableCandidates = [];
+    for (const candidate of candidates) {
+      const { provider, model } = candidate;
+      if (await this.usageManager.isUnderLimit(provider.id, model.name)) {
+        availableCandidates.push(candidate);
+      } else {
+        logger.debug(
+          `Skipping provider '${provider.id}' for model '${modelname}' (real name: '${model.name}') due to rate limits.`,
+        );
       }
-      return a.outputCost - b.outputCost;
-    });
+    }
+    return availableCandidates;
+  }
 
-    // Return the original candidate object to preserve identity.
-    return pricedCandidates.length > 0 ? pricedCandidates[0].candidate : undefined;
+  /**
+   * Partitions candidates into zero-cost and paid providers.
+   */
+  private partitionCandidatesByCost(
+    candidates: { provider: Provider; model: Model }[]
+  ): { zeroCost: { provider: Provider; model: Model }[]; paid: { provider: Provider; model: Model }[] } {
+    const zeroCost: { provider: Provider; model: Model }[] = [];
+    const paid: { provider: Provider; model: Model }[] = [];
+
+    for (const candidate of candidates) {
+      if (this.isZeroCost(candidate.provider, candidate.model)) {
+        zeroCost.push(candidate);
+      } else {
+        paid.push(candidate);
+      }
+    }
+
+    return { zeroCost, paid };
+  }
+
+  /**
+   * Selects the best candidate from partitioned providers.
+   */
+  private selectBestCandidate(
+    zeroCostCandidates: { provider: Provider; model: Model }[],
+    paidCandidates: { provider: Provider; model: Model }[]
+  ): { provider: Provider; model: Model } | undefined {
+    if (zeroCostCandidates.length > 0) {
+      logger.debug(
+        `Found ${zeroCostCandidates.length} zero-cost providers, selecting randomly`,
+      );
+      return this.randomSelect(zeroCostCandidates);
+    }
+
+    if (paidCandidates.length > 0) {
+      logger.debug(
+        `No zero-cost providers found, selecting lowest cost provider from ${paidCandidates.length} available providers`,
+      );
+      return this.selectBestPaidProvider(paidCandidates);
+    }
+
+    return undefined;
   }
 
   /**
@@ -171,63 +225,20 @@ export class Router {
       `Identified candidate providers: ${candidates.map((c) => c.provider.id).join(", ")}`,
     );
 
-    // Filter candidates to only those under rate limits
-    const availableCandidates = [];
-    for (const candidate of candidates) {
-      const { provider, model } = candidate;
-      // Use the real model name for rate limiting checks
-      if (await this.usageManager.isUnderLimit(provider.id, model.name)) {
-        availableCandidates.push(candidate);
-      } else {
-        logger.debug(
-          `Skipping provider '${provider.id}' for model '${modelname}' (real name: '${model.name}') due to rate limits.`,
-        );
-      }
-    }
-
+    const availableCandidates = await this.filterAvailableCandidates(candidates, modelname);
     if (availableCandidates.length === 0) {
-      logger.error(
-        `All providers for model '${modelname}' are at their rate limits.`
-      );
+      logger.error(`All providers for model '${modelname}' are at their rate limits.`);
       return res.status(503).json({
         error: `All providers for model '${modelname}' are currently at their rate limit. Please try again later.`,
       });
     }
 
-    // Step 1: Partition available candidates into zero-cost and paid
-    const zeroCostCandidates: { provider: Provider; model: Model }[] = [];
-    const paidCandidates: { provider: Provider; model: Model }[] = [];
-
-    for (const candidate of availableCandidates) {
-      if (this.isZeroCost(candidate.provider, candidate.model)) {
-        zeroCostCandidates.push(candidate);
-      } else {
-        paidCandidates.push(candidate);
-      }
-    }
-
-    let selectedCandidate;
-    if (zeroCostCandidates.length > 0) {
-      // If we have zero-cost providers, select randomly from them
-      logger.debug(
-        `Found ${zeroCostCandidates.length} zero-cost providers, selecting randomly`,
-      );
-      selectedCandidate = this.randomSelect(zeroCostCandidates);
-    } else {
-      // No zero-cost providers, select the lowest cost provider from the paid candidates
-      logger.debug(
-        `No zero-cost providers found, selecting lowest cost provider from ${paidCandidates.length} available providers`,
-      );
-      selectedCandidate = this.selectBestPaidProvider(paidCandidates);
-    }
+    const { zeroCost, paid } = this.partitionCandidatesByCost(availableCandidates);
+    const selectedCandidate = this.selectBestCandidate(zeroCost, paid);
 
     if (!selectedCandidate) {
-      logger.error(
-        `Failed to select a provider from available candidates for model: ${modelname}`,
-      );
-      return res
-        .status(500)
-        .json({ error: "Failed to select a suitable provider." });
+      logger.error(`Failed to select a provider from available candidates for model: ${modelname}`);
+      return res.status(500).json({ error: "Failed to select a suitable provider." });
     }
 
     const { provider, model } = selectedCandidate;
