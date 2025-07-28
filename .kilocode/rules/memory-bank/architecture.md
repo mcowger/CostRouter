@@ -61,8 +61,8 @@ The system is composed of several key singleton classes found in `server/compone
     *   **Responsibility**: Manages pricing information for all models, providing a centralized way to calculate the cost of a request. It uses a combination of hardcoded values and provider-specific pricing from the configuration.
 
 *   **`Router.ts`**:
-    *   **Responsibility**: To select the most appropriate provider for an incoming request. It acts as Express middleware.
-    *   **Key Operations**: Finds candidate providers for the requested model, uses `UsageManager.isUnderLimit()` to find one with available capacity, and attaches the selected `Provider` and `Model` objects to `res.locals`.
+    *   **Responsibility**: To select the most appropriate provider for an incoming request using a tiered, cost-based strategy. It acts as Express middleware.
+    *   **Key Operations**: Finds candidate providers for the requested model, checks their rate limits with `UsageManager.isUnderLimit()`, and selects the best option. The selection process first prioritizes any available zero-cost providers. If none are available, it selects the lowest-cost paid provider based on input and output token prices. Finally, it attaches the selected `Provider` and `Model` objects to `res.locals`.
 
 *   **`UnifiedExecutor.ts`**:
     *   **Responsibility**: To execute the API request against the provider chosen by the `Router`, using the Vercel AI SDK. It acts as Express middleware.
@@ -74,8 +74,11 @@ The system is composed of several key singleton classes found in `server/compone
 2.  **Request Reception**: The Express server receives a `POST` request on `/v1/chat/completions`.
 3.  **Routing (`Router.chooseProvider`)**:
     *   The `Router` middleware identifies candidate providers for the requested model.
-    *   It checks each candidate's rate limits via the `UsageManager`.
-    *   The first available provider is selected and attached to the response object (`res.locals`).
+    *   It filters out any providers that are over their rate limits by checking with the `UsageManager`.
+    *   It implements a tiered selection strategy:
+        *   **Tier 1 (Zero-Cost)**: It first checks for any available providers that have a configured cost of zero. If found, one is selected randomly from this group.
+        *   **Tier 2 (Lowest Cost)**: If no zero-cost providers are available, it sorts the remaining (paid) providers by their input token cost, then by their output token cost, and selects the cheapest one.
+    *   The chosen provider and model are attached to the response object (`res.locals`) for the next step in the pipeline.
 4.  **Execution (`UnifiedExecutor.execute`)**:
     *   The `UnifiedExecutor` middleware takes the selected provider.
     *   It uses a factory pattern to get the correct Vercel AI SDK instance for the provider's `type` (e.g., `createOpenAI`, `createAnthropic`).

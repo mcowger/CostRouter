@@ -1,8 +1,8 @@
 import { Low } from 'lowdb';
 import { JSONFile } from 'lowdb/node';
 import { subHours, isBefore, parseISO } from 'date-fns';
-import { UsageDatabase, UsageRecord, UsageRecordSchema } from '../../schemas/usage.schema.js';
-import { logger } from './Logger.js';
+import { UsageDatabase, UsageRecord, UsageRecordSchema } from '#schemas/usage.schema';
+import { logger } from './Logger';
 
 
 type UsageRecordInput = Omit<UsageRecord, 'timestamp' | 'totalTokens'>;
@@ -37,9 +37,9 @@ export class UsageDatabaseManager {
   public async recordUsage(data: UsageRecordInput): Promise<void> {
     const totalTokens = (data.promptTokens || 0) + (data.completionTokens || 0);
     const newRecord: UsageRecord = {
-        ...data,
-        timestamp: new Date().toISOString(),
-        totalTokens,
+      ...data,
+      timestamp: new Date().toISOString(),
+      totalTokens,
     };
 
     // This ensures defaults are applied if any fields are missing
@@ -72,7 +72,7 @@ export class UsageDatabaseManager {
     await this.db.read();
     const originalCount = this.db.data.records.length;
     const cutoffDate = subHours(new Date(), hours);
-    
+
     this.db.data.records = this.db.data.records.filter(record => {
       const recordDate = parseISO(record.timestamp);
       return !isBefore(recordDate, cutoffDate);

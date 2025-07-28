@@ -1,6 +1,6 @@
-import { Pricing } from '../../schemas/pricing.schema.js';
-import { Model } from '../../schemas/model.schema.js';
-import { logger } from './Logger.js';
+import { Pricing } from '#schemas/pricing.schema';
+import { Model } from '#schemas/model.schema';
+import { logger } from './Logger';
 
 /**
  * Singleton component for serving LLM pricing data.

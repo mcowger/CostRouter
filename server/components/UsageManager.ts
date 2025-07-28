@@ -1,13 +1,13 @@
 import { RateLimiterMemory, IRateLimiterOptions } from "rate-limiter-flexible";
-import { ConfigManager } from "./config/ConfigManager.js";
-import { LimiterState } from "./config/IConfigManager.js";
-import { Provider } from "../../schemas/provider.schema.js";
-import { Model } from "../../schemas/model.schema.js";
-import { AppConfig } from "../../schemas/appConfig.schema.js";
-import { logger } from "./Logger.js";
-import { Limits } from "../../schemas/limits.schema.js";
-import { getErrorMessage, formatDuration } from "./Utils.js";
-import { UsageDatabaseManager } from "./UsageDatabaseManager.js";
+import { ConfigManager } from "./config/ConfigManager";
+import { LimiterState } from "./config/IConfigManager";
+import { Provider } from "#schemas/provider.schema";
+import { Model } from "#schemas/model.schema";
+import { AppConfig } from "#schemas/appConfig.schema";
+import { logger } from "./Logger";
+import { Limits } from "#schemas/limits.schema.js";
+import { getErrorMessage, formatDuration } from "./Utils";
+import { UsageDatabaseManager } from "./UsageDatabaseManager";
 
 type LimitType = keyof Limits;
 

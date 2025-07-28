@@ -1,5 +1,5 @@
-import { logger } from "../Logger.js";
-import { Provider } from "../../../schemas/provider.schema.js";
+import { logger } from "../Logger";
+import { Provider } from "#schemas/provider.schema";
 
 const COPILOT_TOKEN_API_URL = "https://api.github.com/copilot_internal/v2/token";
 

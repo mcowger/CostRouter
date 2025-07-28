@@ -42,12 +42,25 @@ jest.mock('../components/config/ConfigManager.js', () => ({
   },
 }));
 
-jest.mock('../components/UsageManager.js', () => ({
-  UsageManager: {
-    getInstance: jest.fn(),
-    initialize: jest.fn()
-  }
-}));
+jest.mock('../components/UsageManager.js', () => {
+  let mockInstance;
+  const mockUsageManager = {
+    initialize: jest.fn(() => {
+      mockInstance = {
+        isUnderLimit: jest.fn(),
+        consume: jest.fn(),
+        getCurrentUsage: jest.fn(),
+      };
+    }),
+    getInstance: jest.fn(() => {
+      if (!mockInstance) {
+        throw new Error("Mock UsageManager must be initialized before use.");
+      }
+      return mockInstance;
+    }),
+  };
+  return { UsageManager: mockUsageManager };
+});
 
 jest.mock('../components/Logger.js', () => ({
   logger: {
@@ -63,16 +76,26 @@ jest.mock('../components/Utils.js', () => ({
 }));
 
 // Mock PriceData
-jest.mock('../components/PriceData.js', () => ({
-  PriceData: {
-    getInstance: jest.fn(() => ({
-      getPriceWithOverride: jest.fn(() => ({
-        inputCostPerMillionTokens: 1000,
-        outputCostPerMillionTokens: 2000
-      }))
-    }))
-  }
-}));
+jest.mock('../components/PriceData.js', () => {
+  let mockInstance;
+  const mockPriceData = {
+    initialize: jest.fn(() => {
+      mockInstance = {
+        getPriceWithOverride: jest.fn().mockReturnValue({
+          inputCostPerMillionTokens: 1,
+          outputCostPerMillionTokens: 2,
+        }),
+      };
+    }),
+    getInstance: jest.fn(() => {
+      if (!mockInstance) {
+        throw new Error("Mock PriceData must be initialized before use.");
+      }
+      return mockInstance;
+    }),
+  };
+  return { PriceData: mockPriceData };
+});
 
 describe('Integration Tests - Complete Request Flow', () => {
   // Mock configuration
@@ -154,15 +177,40 @@ describe('Integration Tests - Complete Request Flow', () => {
 
   const createMockNext = () => jest.fn();
 
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.clearAllMocks();
+    const { ConfigManager } = await import('../components/config/ConfigManager.js');
+    const { UsageManager } = await import('../components/UsageManager.js');
+    const { PriceData } = await import('../components/PriceData.js');
+
+    (ConfigManager.getInstance as jest.Mock).mockReturnValue({
+      getProviders: jest.fn().mockReturnValue(mockProviders),
+    });
+    (UsageManager.getInstance as jest.MockedFunction<any>).mockReturnValue(mockUsageManager);
+
+    // Ensure PriceData is mocked and initialized before Router
+    (PriceData.getInstance as jest.Mock).mockReturnValue({
+      getPriceWithOverride: jest.fn(() => ({
+        inputCostPerMillionTokens: 1,
+        outputCostPerMillionTokens: 2
+      }))
+    });
+    // Explicitly initialize PriceData and UsageManager here since Router depends on them
+    PriceData.initialize();
+    UsageManager.initialize();
   });
 
   afterEach(() => {
     const Router = require('../components/Router.js').Router;
     const UnifiedExecutor = require('../components/UnifiedExecutor.js').UnifiedExecutor;
+    const PriceData = require('../components/PriceData.js').PriceData;
+    const UsageManager = require('../components/UsageManager.js').UsageManager;
+
+    // Resetting singletons
     (Router as any).instance = null;
     (UnifiedExecutor as any).instance = null;
+    (PriceData as any).instance = null; // Reset PriceData as well
+    (UsageManager as any).instance = null; // Reset UsageManager as well
   });
 
   it('should handle complete non-streaming request flow', async () => {

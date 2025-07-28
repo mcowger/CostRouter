@@ -1,7 +1,7 @@
-import { IConfigManager, LimiterState } from './IConfigManager.js';
-import { DatabaseConfigManager } from './DatabaseConfigManager.js';
-import { AppConfig } from '../../../schemas/appConfig.schema.js';
-import { Provider } from '../../../schemas/provider.schema.js';
+import { IConfigManager, LimiterState } from './IConfigManager';
+import { DatabaseConfigManager } from './DatabaseConfigManager';
+import { AppConfig } from '#schemas/appConfig.schema.js';
+import { Provider } from '#schemas/provider.schema.js';
 import EventEmitter from 'events';
 
 type InitializeParams = {
