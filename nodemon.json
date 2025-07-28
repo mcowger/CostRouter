@@ -4,6 +4,6 @@
     "schemas"
   ],
   "ext": "ts,json",
-  "exec": "tsx server/index.ts  --config-database config/config.jsonc -l debug --usage-db-path config/usage.db.json",
+  "exec": "tsx server/index.ts  --config-database config/config.jsonc -l debug",
   "signal": "SIGTERM"
 }

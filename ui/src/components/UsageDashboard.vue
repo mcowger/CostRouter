@@ -28,14 +28,11 @@
       Last updated: {{ formatTimestamp(usageData.timestamp) }}
     </div>
 
-    <!-- Historical Data Sparklines -->
-    <HistoricalSparklines />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue';
-import HistoricalSparklines from './HistoricalSparklines.vue';
 import OverallModelUsage from './OverallModelUsage.vue';
 import UsageProviderCard from './UsageProviderCard.vue';
 

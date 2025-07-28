@@ -53,4 +53,4 @@ USER nodejs
 # The command to run when the container starts.
 # It points directly to the compiled server entry point.
 # Arguments like --config can be appended to the 'docker run' command.
-CMD ["node", "dist/server/index.js","--config","/config/config.jsonc","--usage-db-path","/config/usage.db.json"]
+CMD ["node", "dist/server/index.js","--config","/config/config.jsonc"]

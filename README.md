@@ -63,7 +63,7 @@ An intelligent reverse proxy for routing requests to multiple Large Language Mod
     ```
     *   The gateway will be accessible on `http://localhost:3000`.
     *   The UI is served from the same port at the `/` route.
-    *   Configuration and the usage database are mounted from your host machine.  Again, if you dont have an existing config file, an empty one will be made for you.
+    *   Configuration is mounted from your host machine. If you dont have an existing config file, an empty one will be made for you.
 
 ## Basic Usage
 
@@ -104,7 +104,6 @@ The gateway uses a pipeline pattern with singleton managers for core services:
 *   **`UsageManager`**: Tracks and enforces rate limits in real-time.
 *   **`Router`**: Selects the optimal provider for each incoming request using the cost-optimized algorithm.
 *   **`UnifiedExecutor`**: Executes the request against the chosen provider using the Vercel AI SDK.
-*   **`UsageDatabaseManager`**: Persists usage data for historical analysis.
 
 ## Technology Stack
 

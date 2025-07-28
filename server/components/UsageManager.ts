@@ -7,7 +7,6 @@ import { AppConfig } from "#schemas/appConfig.schema";
 import { logger } from "./Logger";
 import { Limits } from "#schemas/limits.schema.js";
 import { getErrorMessage, formatDuration } from "./Utils";
-import { UsageDatabaseManager } from "./UsageDatabaseManager";
 
 type LimitType = keyof Limits;
 
@@ -252,19 +251,6 @@ export class UsageManager {
   ): Promise<void> {
     logger.debug(`Consuming usage for provider '${providerId}':`, { model, usage, costInUSD });
 
-    try {
-      const dbManager = UsageDatabaseManager.getInstance();
-      await dbManager.recordUsage({
-        providerId,
-        model,
-        promptTokens: usage.promptTokens ?? 0,
-        completionTokens: usage.completionTokens ?? 0,
-        cost: costInUSD,
-      });
-    } catch (error) {
-      // Non-fatal error, as this is for optional reporting.
-      // The error is logged by the singleton's initialization check.
-    }
 
     const totalTokens = (usage.promptTokens || 0) + (usage.completionTokens || 0);
     const costInPoints = Math.floor(costInUSD * COST_MULTIPLIER);

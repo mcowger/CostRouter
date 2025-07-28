@@ -7,7 +7,6 @@ import { ConfigManager } from "./components/config/ConfigManager";
 import { PriceData } from "./components/PriceData";
 import { Router } from "./components/Router";
 import { UsageManager } from "./components/UsageManager";
-import { UsageDatabaseManager } from "./components/UsageDatabaseManager";
 import { logger, responseBodyLogger, requestResponseLogger } from "./components/Logger";
 import { UnifiedExecutor } from "./components/UnifiedExecutor";
 import { getErrorMessage } from "./components/Utils";
@@ -31,21 +30,6 @@ async function main() {
       description: "Logging level (info, debug, warn, error)",
       default: "info",
     })
-    .option("usage-db-path", {
-      type: "string",
-      description: "Path to the usage database file (e.g., usage.db.json). If not provided, usage tracking is disabled.",
-
-    })
-    .option("prune-max-age", {
-      type: "number",
-      description: "Maximum age in hours for usage records. Older records will be pruned on startup.",
-      default: 720, // 30 days
-    })
-    .option("disable-pruning", {
-      type: "boolean",
-      description: "Disables automatic pruning of old usage records on startup.",
-      default: false,
-    })
     .parse();
 
   logger.level = argv.loglevel;
@@ -56,17 +40,6 @@ async function main() {
   await UsageManager.initialize();
   Router.initialize();
 
-  if (argv.usageDbPath) {
-    await UsageDatabaseManager.initialize(argv.usageDbPath);
-    if (!argv.disablePruning && argv.pruneMaxAge > 0) {
-      try {
-        const dbManager = UsageDatabaseManager.getInstance();
-        await dbManager.pruneOldRecords(argv.pruneMaxAge);
-      } catch (error) {
-        logger.error(`Failed to prune old usage data: ${getErrorMessage(error)}`);
-      }
-    }
-  }
 
   // --- 3. Get Instances ---
   const router = Router.getInstance();
@@ -227,37 +200,6 @@ async function main() {
     }
   });
 
-
-  // --- 8. Usage API Routes ---
-  app.get("/usage/get", async (req, res) => {
-    try {
-      const { hours = '24', model, providerId } = req.query;
-      const dbManager = UsageDatabaseManager.getInstance();
-      const records = await dbManager.getUsage(parseFloat(hours as string), {
-        model: model as string,
-        providerId: providerId as string,
-      });
-      res.json(records);
-    } catch (error) {
-      const message = getErrorMessage(error);
-      logger.error(`Failed to get usage data: ${message}`);
-      // Don't leak internal error details to the client
-      res.status(500).json({ error: "Failed to retrieve usage data." });
-    }
-  });
-
-  app.post("/usage/prune", async (req, res) => {
-    try {
-      const { hours = '720' } = req.body;
-      const dbManager = UsageDatabaseManager.getInstance();
-      const count = await dbManager.pruneOldRecords(parseInt(hours, 10));
-      res.json({ message: `Successfully pruned ${count} records.` });
-    } catch (error) {
-      const message = getErrorMessage(error);
-      logger.error(`Failed to prune usage data: ${message}`);
-      res.status(500).json({ error: "Failed to prune usage data." });
-    }
-  });
 
   // --- 8. Usage Dashboard API Route ---
   app.get("/usage/current", async (_req, res) => {
