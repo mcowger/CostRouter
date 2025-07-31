@@ -2,7 +2,7 @@ node_modules/
 build/
 dist/
 **/dist/*
-
+scripts/*
 config/*.jsonc
 npm-debug.log*
 config.json
